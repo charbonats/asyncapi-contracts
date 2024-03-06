@@ -2,13 +2,28 @@
 
 ## Description
 
-`asyncapi-contracst` is a framework which lets you design your APIs using AsyncAPI specification in a Pythonic way.
+`asyncapi-contracst` is a framework which lets you design, serve and consume your APIs using AsyncAPI specification in a Pythonic way.
 
 You must first define operations using decorated classes, and then define an application that must implement these operations.
 
-Once an application is defined, you can generate AsyncAPI specification from it.
+Once an application is defined, and even before operations are implemented, you can generate AsyncAPI specification from it. You can also start writing typed-safe client code to consume the yet to be written operations.
 
 It also integrates with [`nats-micro`](https://charbonats.github.io/nats-micro) to easily deploy an application as a NATS Micro service.
+
+
+## Motivation
+
+I always wanted to try design first approach for my APIs.
+
+Design first approach is a way to design your APIs before you start implementing them. This approach is very useful when you are working in a team and you want to make sure that everyone is on the same page.
+
+This [blog post from Swagger.io](https://swagger.io/blog/code-first-vs-design-first-api/) explains the difference between design first and code first approach.
+
+However, in order to use design first approach, you need to have a way to describe your API. The most successfull way to describe RESTful APIs is [OpenAPI](https://www.openapis.org/). Its counterpart for event driven application is [AsyncAPI](https://www.asyncapi.com/).
+
+Turns out it's not that easy to find a good tool to design your APIs using AsyncAPI. An online editor is available at [https://studio.asyncapi.com/](https://studio.asyncapi.com/), but it's quite slow on a slow internet connection / old computer. Also, it's not easy navigating through all the sections of the AsyncAPI specification.
+
+Due to these reasons, I decided to create a simple tool to design my APIs using AsyncAPI, with a big difference being that API specification is not written directly in AsyncAPI, but using Python classes and objects.
 
 ## Example
 
@@ -88,7 +103,23 @@ The `Application` class is used to define an application:
 
 - the `operations` parameter is used to define [the operations](https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationObject) of the application.
 
-### Implement the operations
+### Generate AsyncAPI specification
+
+```python
+from contracts.specification import build_spec
+
+
+spec = build_spec(app)
+print(spec.export_json())
+```
+
+The `build_spec` function is used to generate an AsyncAPI specification from an application.
+
+The output of the `export_json` method is a JSON string representing the AsyncAPI specification.
+
+You can checkout the output of the example project: [examples/demo_project/asyncapi.json](examples/demo_project/asyncapi.json)
+
+### Server side: Implement the operations
 
 ```python
 from contracts import Message
@@ -113,7 +144,7 @@ This is because the `contracts` framework is designed to work with different bac
 
 Also, returning a value does not allow to distinguish between a successful response and an error response. By using the `respond` method, it is implied that the response is a successful response. If you want to send an error response, you can use the `respond_error` method.
 
-### Start the application using a backend
+### Server side: Start the application using a backend
 
 ```python
 import nats_contrib.micro as micro
@@ -139,32 +170,32 @@ async def setup(ctx: micro.Context) -> None:
 > Note: At the time of writing, an application MAY be started without implementations for all operations. However, this will change in the future, and an error will be raised if an operation is not implemented in order to match with AsyncAPI spec.
 > See https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationsObject
 
-### Generate AsyncAPI specification
+## Client side: Consume the operations
 
 ```python
-from contracts.specification import build_spec
+from contracts import Message
+from contracts.interfaces import Client
 
+class DoCreateUser:
+    """A class that can call the create_user operation remotely."""
+    def __init__(self, client: Client) -> None:
+        self.client = client
 
-spec = build_spec(app)
-print(spec.export_json())
+    async def create_user(self, user_id: str) -> str:
+        """Create a user."""
+        # Send the request message
+        response = await self.client.send(
+            # Create a request message
+            CreateUser.request(
+                # First argument is the request data
+                CreateUserRequest(user_id=user_id),
+                # Second argument is the message parameters
+                project_id=1000,
+            )
+        )
+        # This will decode the response data into a CreateProjectUserResponse object
+        user_created = response.data()
+        return user_created.user_id
 ```
 
-The `build_spec` function is used to generate an AsyncAPI specification from an application.
-
-The output of the `export_json` method is a JSON string representing the AsyncAPI specification.
-
-You can checkout the output of the example project: [examples/demo_project/asyncapi.json](examples/demo_project/asyncapi.json)
-
-## Motivation
-
-I always wanted to try design first approach for my APIs.
-
-Design first approach is a way to design your APIs before you start implementing them. This approach is very useful when you are working in a team and you want to make sure that everyone is on the same page.
-
-This [blog post from Swagger.io](https://swagger.io/blog/code-first-vs-design-first-api/) explains the difference between design first and code first approach.
-
-However, in order to use design first approach, you need to have a way to describe your API. The most successfull way to describe RESTful APIs is [OpenAPI](https://www.openapis.org/). Its counterpart for event driven application is [AsyncAPI](https://www.asyncapi.com/).
-
-Turns out it's not that easy to find a good tool to design your APIs using AsyncAPI. An online editor is available at [https://studio.asyncapi.com/](https://studio.asyncapi.com/), but it's quite slow on a slow internet connection / old computer. Also, it's not easy navigating through all the sections of the AsyncAPI specification.
-
-Due to these reasons, I decided to create a simple tool to design my APIs using AsyncAPI, with a big difference being that API specification is not written directly in AsyncAPI, but using Python classes and objects.
+At the time of writing, a single client implementation is provided, which is the `MicroClient` class. This class is used to send and receive messages using NATS thankts to [`nats-micro`](https://github.com/charbonats/nats-micro) package. 
