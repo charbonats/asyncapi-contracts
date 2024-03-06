@@ -69,7 +69,10 @@ from .operations import CreateUser, CreateUserRequest, CreatedUser
 
 
 class CreateUserImpl(CreateUser):
+    """Implements the CreateUser operation."""
+
     async def handle(self, message: Message[CreateUser]) -> None:
+        """Handle an incoming request message."""
         # Create a user
         user_id = "123"
         await message.respond(CreatedUser(user_id=user_id))
@@ -87,15 +90,19 @@ from .implementation import CreateUserImpl
 async def setup(ctx: micro.Context) -> None:
     """An example setup function to start a micro service."""
 
-    # Mount the app
+    # Start the app as a NATS Micro service
     await start_micro_server(
         ctx,
+        # Provide the application
         app,
+        # Provide the operation implementations
         [
             CreateUserImpl(),
         ],
     )
 ```
+> Note: At the time of writing, an application MAY be started without implementations for all operations. However, this will change in the future, and an error will be raised if an operation is not implemented in order to match with AsyncAPI spec.
+> See https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationsObject
 
 ## Motivation
 
