@@ -1,7 +1,7 @@
 [project]
 name = "asyncapi-contracts"
 version = "0.1.0"
-description = "Add your description here"
+description = "Contract driven development of Async API applications in Python"
 authors = [
     { name = "Guillaume Charbonnier", email = "guillaume.charbonnier@araymond.com" }
 ]
@@ -23,9 +23,6 @@ build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
-dev-dependencies = [
-    "pip>=24.0",
-]
 
 [tool.hatch.metadata]
 allow-direct-references = true

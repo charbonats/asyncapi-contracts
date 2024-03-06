@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterable
 
 from .operation import Operation
 
@@ -75,39 +75,25 @@ class Application:
         self.license = license
         self.tags = tags or []
         self.external_docs = external_docs
-        self._registered_endpoints: list[Operation[Any, Any, Any, Any, Any]] = []
 
-    def with_endpoints(
-        self, *endpoint: Operation[Any, Any, Any, Any, Any]
-    ) -> Application:
-        """Return a new service instance with additional endpoints registered."""
-        service = self.__copy__()
-        for ep in endpoint:
-            service._add_endpoints(ep)
-        return service
 
-    def _add_endpoints(self, endpoint: Operation[Any, Any, Any, Any, Any]) -> None:
-        for candidate in self.endpoints:
+def validate(
+    app: Application,
+    endpoints: Iterable[Operation[Any, Any, Any, Any, Any]],
+) -> list[Operation[Any, Any, Any, Any, Any]]:
+    subjects: dict[str, str] = {}
+    operations: list[Operation[Any, Any, Any, Any, Any]] = []
+    for endpoint in endpoints:
+        for candidate in app.endpoints:
             if isinstance(endpoint, candidate):
                 break
         else:
             raise ValueError(f"Endpoint {endpoint} is not supported by the service")
-        for existing in self._registered_endpoints:
-            if existing.spec.address.subject == endpoint.spec.address.subject:
-                raise ValueError(
-                    f"Endpoint {endpoint} has the same address as {existing}"
-                )
-        self._registered_endpoints.append(endpoint)
-
-    def __copy__(self) -> Application:
-        new_instance = Application(
-            id=self.id,
-            name=self.name,
-            version=self.version,
-            description=self.description,
-            metadata=self.metadata,
-            operations=[ep for ep in self.endpoints],
-        )
-        for ep in self._registered_endpoints:
-            new_instance._registered_endpoints.append(ep)
-        return new_instance
+        if endpoint.spec.address.subject in subjects:
+            existing_endpoint = subjects[endpoint.spec.address.subject]
+            raise ValueError(
+                f"Endpoint {endpoint} uses the same subject as endpoint {existing_endpoint}: {endpoint.spec.address.subject}"
+            )
+        subjects[endpoint.spec.address.subject] = endpoint.spec.name
+        operations.append(endpoint)
+    return operations

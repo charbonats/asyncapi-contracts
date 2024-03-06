@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 from typing import Generic
 
-from .operation import E, OperationRequest, ParamsT, R, T
+from ..operation import E, OperationRequest, ParamsT, R, T
 
 
 class OperationError(Exception):

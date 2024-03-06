@@ -3,7 +3,8 @@ from __future__ import annotations
 import contracts
 from nats import connect
 from contracts.backends.micro import Client
-from contract.my_endpoint import MyEndpoint, MyRequest
+
+from demo.contract.my_endpoint import MyEndpoint, MyRequest
 
 
 async def do_request(

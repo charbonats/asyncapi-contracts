@@ -16,20 +16,6 @@ regex = r"\{(.*?)\}"
 pattern = re.compile(regex)
 
 
-def _get_fields(obj: object) -> list[str]:
-    """Get all fields of an object."""
-    # Dataclasses (standard library)
-    if is_dataclass(obj):
-        return [field.name for field in fields(obj)]
-    # Pydantic V2
-    if hasattr(obj, "model_fields"):
-        return list(obj.model_fields.keys())  # type: ignore
-    # Pydantic V1
-    if hasattr(obj, "__fields__"):
-        return list(obj.__fields__.keys())  # type: ignore
-    raise TypeError(f"Cannot get fields of object: {obj} ({type(obj)})")
-
-
 @overload
 def new_address(subject: str) -> Address[None]:
     ...
@@ -92,25 +78,7 @@ class Address(Generic[ParamsT]):
     subject: str
     parameters: type[ParamsT]
 
-    @overload
-    def __init__(self: Address[None], subject: str) -> None:
-        """Create a new address without parameter.
-
-        Args:
-            subject: The subject filter.
-        """
-
-    @overload
     def __init__(self, subject: str, parameters: type[ParamsT]) -> None:
-        """Create a new address.
-
-        Args:
-            subject: The subject filter.
-            parameters: The parameters expected to be found on each valid subject matching subject filter.
-                Parameters must be a dataclass or a class with a `__fields__` attribute such as `pydantic.BaseModel`.
-        """
-
-    def __init__(self, subject: str, parameters: Any = None) -> None:
         self.subject = subject
         self.parameters = parameters
         self.placeholders = Placeholders.from_subject(subject, parameters)
@@ -262,3 +230,17 @@ class Placeholders(Generic[ParamsT]):
                 placeholders.mapping[placeholder_name] = pos
         placeholders.subject = sanitized_subject
         return placeholders
+
+
+def _get_fields(obj: object) -> list[str]:
+    """Get all fields of an object."""
+    # Dataclasses (standard library)
+    if is_dataclass(obj):
+        return [field.name for field in fields(obj)]
+    # Pydantic V2
+    if hasattr(obj, "model_fields"):
+        return list(obj.model_fields.keys())  # type: ignore
+    # Pydantic V1
+    if hasattr(obj, "__fields__"):
+        return list(obj.__fields__.keys())  # type: ignore
+    raise TypeError(f"Cannot get fields of object: {obj} ({type(obj)})")

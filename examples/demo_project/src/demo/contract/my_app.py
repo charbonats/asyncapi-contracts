@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from .__about__ import __version__
+from demo.__about__ import __version__
+
 from .my_endpoint import MyEndpoint
 
 from contracts import Application

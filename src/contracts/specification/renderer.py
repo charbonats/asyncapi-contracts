@@ -42,8 +42,10 @@ def create_docs_app(
 def create_docs_server(
     app: Application,
     port: int = 8000,
+    docs_path: str = "/",
+    asyncapi_path: str = "/asyncapi.json",
 ) -> Server:
-    asgi_app = create_docs_app(app)
+    asgi_app = create_docs_app(app, docs_path=docs_path, asyncapi_path=asyncapi_path)
     cfg = uvicorn.Config(
         app=asgi_app,
         port=port,

@@ -14,7 +14,7 @@ dependencies = [
 package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-version = { attr = "demo.contract.__about__.__version__" }
+version = { attr = "demo.__about__.__version__" }
 
 [tool.microb.target.default]
 entrypoint = ["micro", "run", "demo.server.main:setup"]

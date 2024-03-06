@@ -1,59 +1,27 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, Callable
+from typing import Any, AsyncContextManager, Callable, Iterable
 
 from nats.aio.client import Client as NatsClient
+from nats_contrib import micro
 
 from nats_contrib.micro.api import Endpoint, Service
 from nats_contrib.micro.client import Client as BaseMicroClient
 from nats_contrib.micro.client import ServiceError
-from nats_contrib.micro.context import Context
 from nats_contrib.micro.request import Request as MicroRequest
-
-from contracts.application import Application
-from contracts.client import OperationError, Reply, Client as BaseClient
+from contracts.specification.renderer import create_docs_server
+from contracts.application import Application, validate
+from contracts.interfaces.client import OperationError, Reply, Client as BaseClient
+from contracts.interfaces.server import Server as BaseServer
 from contracts.message import Message
 from contracts.operation import Operation, OperationRequest, OperationSpec
-from contracts.types import E, ParamsT, R, S, T
+from contracts.types import E, ParamsT, R, T
 
 
-async def add_application(
-    ctx: Context,
-    app: Application,
-    http_port: int | None = None,
-    queue_group: str | None = None,
-    now: Callable[[], datetime.datetime] | None = None,
-    id_generator: Callable[[], str] | None = None,
-    api_prefix: str | None = None,
-) -> Service:
-    """Start an app in a micro context."""
-
-    srv = await ctx.add_service(
-        name=app.name,
-        version=app.version,
-        description=app.description,
-        metadata=app.metadata,
-        queue_group=queue_group,
-        now=now,
-        id_generator=id_generator,
-        api_prefix=api_prefix,
-    )
-    for endpoint in app._registered_endpoints:  # pyright: ignore[reportPrivateUsage]
-        await add_operation(srv, endpoint, queue_group=queue_group)
-
-    if http_port is not None:
-        from contracts.specification.renderer import create_docs_server
-
-        http_server = create_docs_server(app, http_port)
-        await ctx.enter(http_server)
-
-    return srv
-
-
-async def add_operation(
+async def _add_operation(
     service: Service,
-    operation: Operation[S, ParamsT, T, R, E],
+    operation: Operation[Any, Any, Any, Any, Any],
     queue_group: str | None = None,
 ) -> Endpoint:
     """Add an operation to a service."""
@@ -89,6 +57,82 @@ async def add_operation(
         metadata=operation.spec.metadata,
         queue_group=queue_group,
     )
+
+
+async def start_micro_server(
+    ctx: micro.Context,
+    app: Application,
+    endpoints: Iterable[Operation[Any, Any, Any, Any, Any]],
+    queue_group: str | None = None,
+    now: Callable[[], datetime.datetime] | None = None,
+    id_generator: Callable[[], str] | None = None,
+    api_prefix: str | None = None,
+    http_port: int | None = None,
+    docs_path: str = "/docs",
+    asyncapi_path: str = "/asyncapi.json",
+) -> Service:
+    """Start a micro server."""
+    server = MicroServer(
+        ctx.client,
+        queue_group=queue_group,
+        now=now,
+        id_generator=id_generator,
+        api_prefix=api_prefix,
+    )
+    if http_port is not None:
+        http_server = create_docs_server(
+            app, port=http_port, docs_path=docs_path, asyncapi_path=asyncapi_path
+        )
+        await ctx.enter(http_server)
+    return await ctx.enter(server.add_application(app, *endpoints))
+
+
+class MicroServer(BaseServer[Service]):
+    def __init__(
+        self,
+        client: NatsClient,
+        queue_group: str | None = None,
+        now: Callable[[], datetime.datetime] | None = None,
+        id_generator: Callable[[], str] | None = None,
+        api_prefix: str | None = None,
+    ) -> None:
+        self._nc = client
+        self._client = BaseMicroClient(client, api_prefix=api_prefix)
+        self.queue_group = queue_group
+        self.now = now
+        self.id_generator = id_generator
+        self.api_prefix = api_prefix
+
+    def add_application(
+        self,
+        app: Application,
+        *endpoints: Operation[Any, Any, Any, Any, Any],
+    ) -> AsyncContextManager[Service]:
+        all_endpoints = validate(app, endpoints)
+        queue_group = self.queue_group
+        srv = micro.add_service(
+            self._nc,
+            name=app.name,
+            version=app.version,
+            description=app.description,
+            metadata=app.metadata,
+            queue_group=self.queue_group,
+            now=self.now,
+            id_generator=self.id_generator,
+            api_prefix=self.api_prefix,
+        )
+
+        class Ctx:
+            async def __aenter__(self) -> Service:
+                await srv.start()
+                for endpoint in all_endpoints:
+                    await _add_operation(srv, endpoint, queue_group)
+                return srv
+
+            async def __aexit__(self, *args: Any) -> None:
+                await srv.stop()
+
+        return Ctx()
 
 
 class MicroMessage(Message[ParamsT, T, R, E]):

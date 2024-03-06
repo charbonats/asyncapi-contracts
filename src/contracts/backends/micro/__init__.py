@@ -1,3 +1,3 @@
-from .micro import add_application, add_operation, Client
+from .micro import MicroServer, Client
 
-__all__ = ["add_application", "add_operation", "Client"]
+__all__ = ["MicroServer", "Client"]

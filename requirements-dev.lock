@@ -43,4 +43,3 @@ typing-extensions==4.10.0
     # via pydantic-core
 uvicorn==0.27.1
     # via asyncapi-contracts
-pip==24.0

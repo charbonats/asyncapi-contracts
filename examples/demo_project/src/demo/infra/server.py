@@ -4,10 +4,10 @@ import logging
 
 
 import nats_contrib.micro as micro
-from contracts.backends.micro import add_application
+from contracts.backends.micro.micro import start_micro_server
 
 from ..contract.my_app import app
-from .my_endpoint import MyEndpointImplementation
+from ..domain.my_endpoint import MyEndpointImplementation
 
 logger = logging.getLogger("app")
 
@@ -26,12 +26,18 @@ async def setup(ctx: micro.Context) -> None:
     logger.info("Configuring the service")
 
     # Mount the app
-    await add_application(
+    await start_micro_server(
         ctx,
-        app=app.with_endpoints(
+        app,
+        [
             MyEndpointImplementation(12),
-        ),
+        ],
+        # This will start an HTTP server listening on port 8000
+        # The server returns the asyncapi spec on /asyncapi.json
+        # and the documentation on /
         http_port=8000,
+        docs_path="/docs",
+        asyncapi_path="/asyncapi.json",
     )
 
     logger.info("Service is ready and listening to requests")

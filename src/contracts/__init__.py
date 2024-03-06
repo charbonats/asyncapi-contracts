@@ -1,6 +1,6 @@
 from .application import Application
 from .backends import micro
-from .client import Client, OperationError
+from .interfaces.client import Client, OperationError
 from .message import Message
 from .operation import ErrorHandler, Operation, operation
 
