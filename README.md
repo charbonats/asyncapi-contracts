@@ -117,7 +117,7 @@ Also, returning a value does not allow to distinguish between a successful respo
 
 ```python
 import nats_contrib.micro as micro
-from contracts.backends.micro.micro import start_micro_server
+from contracts.backends.micro import start_micro_server
 
 from .app import app
 from .implementation import CreateUserImpl
