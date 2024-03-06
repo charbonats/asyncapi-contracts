@@ -1,6 +1,6 @@
-from .my_endpoint import MyEndpoint
+from .my_operation import MyOperation
 
 # It is recommended to export endpoints from the domain module
 # in a single location. This makes it easier to import them
 # from the infra module and make it easy to see what is available.
-__all__ = ["MyEndpoint"]
+__all__ = ["MyOperation"]

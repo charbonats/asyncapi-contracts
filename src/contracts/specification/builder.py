@@ -82,7 +82,7 @@ def build_spec(
     spec = AsyncAPI(asyncapi="3.0.0", id=app.id, info=info, components=Components())
     # Now add the channels
     # For each channel, first add a component, then add the channel
-    for ep in app.endpoints:
+    for ep in app.components:
         ep_spec = (
             ep._spec  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
         )
@@ -157,7 +157,7 @@ def build_spec(
         )
         # Add operation
         spec.components.operations[ep_spec.name] = Operation(
-            action=Action.SEND,
+            action=Action.RECEIVE,
             channel=channel_ref,
             description=ep.__doc__,
             reply=reply,

@@ -1,29 +1,22 @@
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from types import new_class
 from typing import Any, Callable, Coroutine, Generic, Iterable, Protocol, cast, overload
 
 from .address import Address, new_address
 from .message import Message
-from .validation import TypeAdapter, sniff_type_adapter
-from .types import E, P, ParamsT, R, S, T
+from .validation import sniff_type_adapter
+from .types import E, ParamsT, R, S, T
+from .parameters import ParametersFactory
+from .schema import Schema, sniff_content_type
 
 
 class OperationProtocol(Generic[ParamsT, T, R, E], Protocol):
     def handle(
-        self, request: Message[Operation[S, ParamsT, T, R, E]]
+        self, request: Message[BaseOperation[S, ParamsT, T, R, E]]
     ) -> Coroutine[Any, Any, None]:
-        ...
-
-
-class ParametersFactory(Generic[S, P], Protocol):
-    def __call__(
-        self,
-        *args: S.args,
-        **kwargs: S.kwargs,
-    ) -> P:
         ...
 
 
@@ -35,28 +28,6 @@ class ErrorHandler(Generic[E]):
     fmt: Callable[[BaseException], E] | None = None
 
 
-@dataclass
-class Schema(Generic[T]):
-    """Schema type."""
-
-    type: type[T]
-    content_type: str
-    type_adapter: TypeAdapter[T]
-
-
-def schema(
-    type: type[T],
-    content_type: str | None = None,
-    type_adapter: TypeAdapter[T] | None = None,
-) -> Schema[T]:
-    if not content_type:
-        content_type = _sniff_content_type(type)
-    if not type_adapter:
-        type_adapter = sniff_type_adapter(type)
-    return Schema(type, content_type, type_adapter)
-
-
-@dataclass
 class OperationSpec(Generic[S, ParamsT, T, R, E]):
     """Endpoint specification."""
 
@@ -93,7 +64,7 @@ class OperationRequest(Generic[ParamsT, T, R, E]):
     spec: OperationSpec[Any, ParamsT, T, R, E]
 
 
-class Operation(Generic[S, ParamsT, T, R, E], metaclass=abc.ABCMeta):
+class BaseOperation(Generic[S, ParamsT, T, R, E], metaclass=abc.ABCMeta):
     _spec: OperationSpec[S, ParamsT, T, R, E]
 
     def __init_subclass__(
@@ -108,7 +79,7 @@ class Operation(Generic[S, ParamsT, T, R, E], metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def handle(
-        self, request: Message[Operation[S, ParamsT, T, R, E]]
+        self, request: Message[BaseOperation[S, ParamsT, T, R, E]]
     ) -> Coroutine[Any, Any, None]:
         raise NotImplementedError
 
@@ -191,17 +162,17 @@ class OperationDecorator(Generic[S, ParamsT, T, R, E]):
     def __call__(
         self,
         cls: type[OperationProtocol[ParamsT, T, R, E]],
-    ) -> type[Operation[S, ParamsT, T, R, E]]:
+    ) -> type[BaseOperation[S, ParamsT, T, R, E]]:
         ...
 
     @overload
     def __call__(
         self,
         cls: type[object],
-    ) -> type[Operation[S, ParamsT, T, R, E]]:
+    ) -> type[BaseOperation[S, ParamsT, T, R, E]]:
         ...
 
-    def __call__(self, cls: type[Any]) -> type[Operation[S, ParamsT, T, R, E]]:
+    def __call__(self, cls: type[Any]) -> type[BaseOperation[S, ParamsT, T, R, E]]:
         name = self.name or cls.__name__
         spec = OperationSpec(
             address=self.address,
@@ -214,8 +185,8 @@ class OperationDecorator(Generic[S, ParamsT, T, R, E]):
             catch=self.catch,
             status_code=self.status_code,
         )
-        new_cls = new_class(cls.__name__, (cls, Operation), kwds={"spec": spec})
-        return cast(type[Operation[S, ParamsT, T, R, E]], new_cls)
+        new_cls = new_class(cls.__name__, (cls, BaseOperation), kwds={"spec": spec})
+        return cast(type[BaseOperation[S, ParamsT, T, R, E]], new_cls)
 
 
 @overload
@@ -358,19 +329,19 @@ def operation(
     if not isinstance(request_schema, Schema):
         request_schema = Schema(
             type=request_schema,
-            content_type=_sniff_content_type(request_schema),
+            content_type=sniff_content_type(request_schema),
             type_adapter=sniff_type_adapter(request_schema),
         )
     if not isinstance(response_schema, Schema):
         response_schema = Schema(
             type=response_schema,
-            content_type=_sniff_content_type(response_schema),
+            content_type=sniff_content_type(response_schema),
             type_adapter=sniff_type_adapter(response_schema),
         )
     if not isinstance(error_schema, Schema):
         error_schema = Schema(
             type=error_schema,
-            content_type=_sniff_content_type(error_schema),
+            content_type=sniff_content_type(error_schema),
             type_adapter=sniff_type_adapter(error_schema),
         )
     return OperationDecorator(
@@ -383,31 +354,4 @@ def operation(
         metadata=metadata,
         catch=catch,
         status_code=status_code,
-    )
-
-
-def _sniff_content_type(typ: type[Any]) -> str:
-    if is_dataclass(typ):
-        return "application/json"
-    if hasattr(typ, "model_fields"):
-        return "application/json"
-    if hasattr(typ, "__fields__"):
-        return "application/json"
-    if typ is type(None):
-        return ""
-    if typ is str:
-        return "text/plain"
-    if typ is int:
-        return "text/plain"
-    if typ is float:
-        return "text/plain"
-    if typ is bytes:
-        return "application/octet-stream"
-    if typ is dict:
-        return "application/json"
-    if typ is list:
-        return "application/json"
-    raise TypeError(
-        f"Cannot guess content-type for class {typ}. "
-        "Please specify the content-type explicitly."
     )

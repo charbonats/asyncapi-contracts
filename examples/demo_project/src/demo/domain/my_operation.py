@@ -3,15 +3,15 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from contracts.message import Message
+from contracts import Message
 
-from ..contract.my_endpoint import MyEndpoint, MyResponse
+from ..components.my_operation import MyOperation, MyResponse
 
 logger = logging.getLogger("my-endpoint")
 
 
 @dataclass
-class MyEndpointImplementation(MyEndpoint):
+class MyEndpointImplementation(MyOperation):
     """An implementation of the MyEndpoint.
 
     Usage of @dataclass is purely optional.
@@ -20,7 +20,7 @@ class MyEndpointImplementation(MyEndpoint):
 
     foo: int
 
-    async def handle(self, request: Message[MyEndpoint]) -> None:
+    async def handle(self, request: Message[MyOperation]) -> None:
         """Signature is constrained by endpoint definition."""
 
         # Parameters are extracted from the message subject

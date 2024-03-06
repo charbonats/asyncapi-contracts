@@ -41,5 +41,5 @@ class MyResponse:
         ),
     ],
 )
-class MyEndpoint:
-    """This is an example endpoint definition."""
+class MyOperation:
+    """This is an example operation definition."""

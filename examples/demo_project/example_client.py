@@ -4,7 +4,7 @@ from nats import connect
 from contracts.interfaces import Client, OperationError
 from contracts.backends.micro import Client as MicroClient
 
-from demo.contract.my_endpoint import MyEndpoint, MyRequest
+from demo.components.my_operation import MyOperation, MyRequest
 
 
 async def do_request(
@@ -14,7 +14,7 @@ async def do_request(
     # This will not raise an error if the reply received indicates
     # an error through the status code
     response = await client.send(
-        MyEndpoint.request(MyRequest(value=2), "123"),
+        MyOperation.request(MyRequest(value=2), "123"),
         headers={"foo": "bar"},
         timeout=2.5,
     )

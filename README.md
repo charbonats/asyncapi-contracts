@@ -199,3 +199,15 @@ class DoCreateUser:
 ```
 
 At the time of writing, a single client implementation is provided, which is the `MicroClient` class. This class is used to send and receive messages using NATS thankts to [`nats-micro`](https://github.com/charbonats/nats-micro) package. 
+
+## Design choices vs consequences
+
+Some design choices have been made in order to make the framework as simple as possible. However, these choices have consequences.
+
+The table below lists some of the features or limitations of the framework:
+
+|   | Description | Choice or Limitation |
+|-- | --- | --- |
+| Each operation is a class | Each operation is a class, and the `operation` decorator is used to define the operation. | Choice ✅ |
+| An operation cannot be a function | Operations must be valid types in order to be used as annotations, so that could be seen as the reason why operations cannot be functions. However, using functions is not recommended anyway due to the fact that most of the time additional arguments which cannot be found in the request are required by an operation. Unlike FastAPI or other frameworks which rely on dependency injection, `asyncapi-contracts` encourage to write simple class with `__init__` methods to accept additional arguments. | Choice ✅ |
+| An operation cannot be implemented without a subclass | Because `Message` type is generic to an operation, it's not possible to annotate the input type of an operation `handle` method without a subclass. Users who do not care about type checking may very well implement an `handle` method without a subclass. | Limitation ❌ |

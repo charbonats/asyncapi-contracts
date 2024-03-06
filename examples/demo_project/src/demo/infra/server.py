@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 
-
 import nats_contrib.micro as micro
-from contracts.backends.micro.micro import start_micro_server
 
-from ..contract.my_app import app
-from ..domain.my_endpoint import MyEndpointImplementation
+from contracts.backends.micro import start_micro_server
+
+from ..app import app
+from ..domain.my_operation import MyEndpointImplementation
 
 logger = logging.getLogger("app")
 

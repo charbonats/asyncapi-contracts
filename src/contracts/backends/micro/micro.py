@@ -11,17 +11,22 @@ from nats_contrib.micro.client import Client as BaseMicroClient
 from nats_contrib.micro.client import ServiceError
 from nats_contrib.micro.request import Request as MicroRequest
 from contracts.specification.renderer import create_docs_server
-from contracts.application import Application, validate
-from contracts.interfaces.client import OperationError, Reply, Client as BaseClient
+from contracts.application import Application, validate_consumers, validate_operations
+from contracts.interfaces.client import (
+    OperationError,
+    RawReply,
+    Client as BaseClient,
+)
 from contracts.interfaces.server import Server as BaseServer
 from contracts.message import Message, OT
-from contracts.operation import Operation, OperationRequest
-from contracts.types import E, ParamsT, R, T
+from contracts.operation import BaseOperation
+from contracts.event import EventConsumer
+from contracts.types import ParamsT, T
 
 
 async def _add_operation(
     service: Service,
-    operation: Operation[Any, Any, Any, Any, Any],
+    operation: BaseOperation[Any, Any, Any, Any, Any],
     queue_group: str | None = None,
 ) -> Endpoint:
     """Add an operation to a service."""
@@ -62,7 +67,9 @@ async def _add_operation(
 async def start_micro_server(
     ctx: micro.Context,
     app: Application,
-    endpoints: Iterable[Operation[Any, Any, Any, Any, Any]],
+    components: Iterable[
+        BaseOperation[Any, Any, Any, Any, Any] | EventConsumer[Any, Any, Any]
+    ],
     queue_group: str | None = None,
     now: Callable[[], datetime.datetime] | None = None,
     id_generator: Callable[[], str] | None = None,
@@ -84,7 +91,7 @@ async def start_micro_server(
             app, port=http_port, docs_path=docs_path, asyncapi_path=asyncapi_path
         )
         await ctx.enter(http_server)
-    return await ctx.enter(server.add_application(app, *endpoints))
+    return await ctx.enter(server.add_application(app, *components))
 
 
 class MicroServer(BaseServer[Service]):
@@ -102,13 +109,16 @@ class MicroServer(BaseServer[Service]):
         self.now = now
         self.id_generator = id_generator
         self.api_prefix = api_prefix
+        self._srv: Service | None = None
 
     def add_application(
         self,
         app: Application,
-        *endpoints: Operation[Any, Any, Any, Any, Any],
+        *components: BaseOperation[Any, Any, Any, Any, Any]
+        | EventConsumer[Any, Any, Any],
     ) -> AsyncContextManager[Service]:
-        all_endpoints = validate(app, endpoints)
+        all_operations = validate_operations(app, components)
+        _ = validate_consumers(app, components)
         queue_group = self.queue_group
         srv = micro.add_service(
             self._nc,
@@ -121,11 +131,12 @@ class MicroServer(BaseServer[Service]):
             id_generator=self.id_generator,
             api_prefix=self.api_prefix,
         )
+        self._srv = srv
 
         class Ctx:
             async def __aenter__(self) -> Service:
                 await srv.start()
-                for endpoint in all_endpoints:
+                for endpoint in all_operations:
                     await _add_operation(srv, endpoint, queue_group)
                 return srv
 
@@ -133,6 +144,18 @@ class MicroServer(BaseServer[Service]):
                 await srv.stop()
 
         return Ctx()
+
+    async def add_operation(
+        self,
+        operation: BaseOperation[Any, Any, Any, Any, Any],
+        queue_group: str | None = None,
+    ) -> None:
+        if not self._srv:
+            raise ValueError("Server not started")
+        await _add_operation(self._srv, operation, queue_group)
+
+    async def add_consumer(self, consumer: EventConsumer[Any, Any, Any]) -> None:
+        raise NotImplementedError
 
 
 class MicroMessage(Message[OT]):
@@ -155,11 +178,11 @@ class MicroMessage(Message[OT]):
         self._response_content_type = operation.spec.response.content_type
 
     def params(
-        self: MicroMessage[Operation[Any, ParamsT, Any, Any, Any]],
+        self: MicroMessage[BaseOperation[Any, ParamsT, Any, Any, Any]],
     ) -> ParamsT:
         return self._params
 
-    def payload(self: MicroMessage[Operation[Any, Any, T, Any, Any]]) -> T:
+    def payload(self: MicroMessage[BaseOperation[Any, Any, T, Any, Any]]) -> T:
         return self._data
 
     def headers(self) -> dict[str, str]:
@@ -196,26 +219,37 @@ class Client(BaseClient):
     ) -> None:
         self._client = BaseMicroClient(client)
 
-    async def send(
+    async def __send_event__(
         self,
-        request: OperationRequest[ParamsT, T, R, E],
+        subject: str,
+        payload: bytes,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        """Send an event."""
+        await self._client.nc.publish(
+            subject=subject,
+            payload=payload,
+            headers=headers,
+        )
+
+    async def __send_request__(
+        self,
+        subject: str,
+        payload: bytes,
         headers: dict[str, str] | None = None,
         timeout: float = 1,
-    ) -> Reply[ParamsT, T, R, E]:
+    ) -> RawReply:
         """Send a request."""
-        data = request.spec.request.type_adapter.encode(request.payload)
         try:
             response = await self._client.request(
-                request.subject,
-                data,
+                subject,
+                payload,
                 headers=headers,
                 timeout=timeout,
             )
         except ServiceError as e:
-            return Reply(request, None, None, OperationError(e.code, e.description))
-        return Reply(
-            request,
+            raise OperationError(e.code, e.description, e.headers, e.data) from e
+        return RawReply(
             response.data,
             response.headers or {},
-            None,
         )

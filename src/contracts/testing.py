@@ -3,8 +3,10 @@ from __future__ import annotations
 from types import new_class
 from typing import Any, Generic
 
+from .event import BaseEvent, Event
+
 from .message import Message
-from .operation import Operation, OperationRequest
+from .operation import BaseOperation, OperationRequest
 from .types import E, ParamsT, R, S, T
 
 
@@ -19,7 +21,7 @@ class NoResponseError(Exception):
     """
 
 
-class StubMessage(Message[Operation[Any, ParamsT, T, R, E]]):
+class StubMessage(Message[BaseOperation[Any, ParamsT, T, R, E]]):
     """A message received as a request."""
 
     def __init__(
@@ -95,12 +97,42 @@ class StubMessage(Message[Operation[Any, ParamsT, T, R, E]]):
         return self._response_headers
 
 
+class StubEvent(Event[BaseEvent[Any, ParamsT, T]]):
+    """A stub event for testing."""
+
+    def __init__(
+        self,
+        params: ParamsT,
+        payload: T,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        self._params = params
+        self._data = payload
+        self._headers = headers or {}
+        self._acknowledged = False
+
+    def params(self) -> ParamsT:
+        return self._params
+
+    def payload(self) -> T:
+        return self._data
+
+    def headers(self) -> dict[str, str]:
+        return self._headers
+
+    async def ack(self) -> None:
+        self._acknowledged = True
+
+    def acknowledged(self) -> bool:
+        return self._acknowledged
+
+
 class StubOperation(Generic[S, ParamsT, T, R, E]):
     """A stub operation for testing."""
 
-    _operation: Operation[S, ParamsT, T, R, E]
+    _operation: BaseOperation[S, ParamsT, T, R, E]
 
-    def __init_subclass__(cls, operation: Operation[S, ParamsT, T, R, E]) -> None:
+    def __init_subclass__(cls, operation: BaseOperation[S, ParamsT, T, R, E]) -> None:
         super().__init_subclass__()
         cls._operation = operation
 
@@ -116,21 +148,23 @@ class StubOperation(Generic[S, ParamsT, T, R, E]):
             raise ValueError("Either result or error must be set, not both")
         self._result = result
         self._error = error
-        self._called_with: list[Message[Operation[S, ParamsT, T, R, E]]] = []
+        self._called_with: list[Message[BaseOperation[S, ParamsT, T, R, E]]] = []
 
-    async def handle(self, request: Message[Operation[S, ParamsT, T, R, E]]) -> None:
+    async def handle(
+        self, request: Message[BaseOperation[S, ParamsT, T, R, E]]
+    ) -> None:
         self._called_with.append(request)
         if self._result is not ...:
             await request.respond(self._result)
         else:
             await request.respond_error(500, "Internal Server Error", data=self._error)
 
-    def called_with(self) -> list[Message[Operation[S, ParamsT, T, R, E]]]:
+    def called_with(self) -> list[Message[BaseOperation[S, ParamsT, T, R, E]]]:
         return self._called_with
 
 
 def make_operation(
-    operation: type[Operation[S, ParamsT, T, R, E]],
+    operation: type[BaseOperation[S, ParamsT, T, R, E]],
     result: R = ...,
     error: E = ...,
 ) -> StubOperation[S, ParamsT, T, R, E]:
@@ -151,3 +185,11 @@ def make_message(
     headers: dict[str, str] | None = None,
 ) -> StubMessage[ParamsT, T, R, E]:
     return StubMessage(request, headers)
+
+
+def make_event(
+    params: ParamsT,
+    payload: T,
+    headers: dict[str, str] | None = None,
+) -> StubEvent[ParamsT, T]:
+    return StubEvent(params, payload, headers)

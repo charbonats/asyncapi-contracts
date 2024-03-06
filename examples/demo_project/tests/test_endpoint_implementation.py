@@ -1,7 +1,7 @@
 import pytest
 
-from demo.domain.my_endpoint import MyEndpointImplementation
-from demo.contract.my_endpoint import MyRequest, MyResponse
+from demo.domain.my_operation import MyEndpointImplementation
+from demo.components.my_operation import MyRequest, MyResponse
 
 from contracts.testing import make_message
 

@@ -281,6 +281,10 @@ class Channel(BaseModel):
 
 
 class Action(str, Enum):
+    """Use send when it's expected that the application will send a message
+    to the given channel, and receive when the application should expect
+    receiving messages from the given channel."""
+
     SEND = "send"
     RECEIVE = "receive"
 
