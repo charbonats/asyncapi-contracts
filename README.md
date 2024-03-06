@@ -25,24 +25,41 @@ from contracts import operation
 
 
 @dataclass
-class CreateUserRequest:
+class ProjectParameters:
+    project_id: str
+
+
+@dataclass
+class CreateProjectUserRequest:
     username: str
     email: str
 
 
 @dataclass
-class CreatedUser:
+class CreateProjectUserResponse:
     user_id: str
 
 
 @operation(
-    address="user.create",
-    request_schema=CreateUserRequest,
-    response_schema=CreatedUser,
+    address="project.{project_id}.user.create",
+    parameters=ProjectParameters,
+    request_schema=CreateProjectUserRequest,
+    response_schema=CreateProjectUserResponse,
+    error_schema=str,
 )
-class CreateUser:
-    """Operation to create a new user."""
+class CreateProjectUser:
+    """Operation to create a new project user."""
 ```
+
+The `operation` decorator is used to define an operation:
+
+- the `address` parameter is used to define the address of the operation. In AsyncAPI, an operation is not associated to an address, but to [a channel](https://www.asyncapi.com/docs/concepts/channel). However, `asyncapi-contracts` will take care of identifying the channels used by the application and [adding them in the documentation](https://www.asyncapi.com/docs/concepts/asyncapi-document/adding-channels), based on the operations specifications.
+- the `parameters` parameter is used to define the parameters found in the operation's address. Just like addresses, in AsyncAPI, parameters are defined for [channels](https://www.asyncapi.com/docs/concepts/channel) but `asyncapi-contracts` will take care of identifying the parameters used by the application and [adding them in the documentation](https://www.asyncapi.com/docs/concepts/asyncapi-document/dynamic-channel-address), based on the operations specifications.
+- the `request_schema` parameter is used to define the request schema of the operation. In AsyncAPI, this corresponds to a [message](https://www.asyncapi.com/docs/concepts/message) defined in a [channel](https://www.asyncapi.com/docs/concepts/channel).
+- the `response_schema` parameter is used to define the response schema of the operation. In AsyncAPI, this corresponds to a [message](https://www.asyncapi.com/docs/concepts/message) defined in a [reply channel](https://www.asyncapi.com/docs/concepts/channel). `asyncapi-contracts` will take care of identifying the reply channels used by the application and [adding them in the documentation](https://www.asyncapi.com/docs/concepts/asyncapi-document/reply-info), based on the operations specifications.
+- the `error_schema` parameter is used to define the error schema of the operation. In AsyncAPI, this corresponds to a [message](https://www.asyncapi.com/docs/concepts/message) defined in a [reply channel](https://www.asyncapi.com/docs/concepts/channel). `asyncapi-contracts` will take care of identifying the reply channels used by the application and [adding them in the documentation](https://www.asyncapi.com/docs/concepts/asyncapi-document/reply-info), based on the operations specifications.
+
+Other parameters are available but are not documented yet.
 
 ### Defining an application
 
@@ -61,6 +78,16 @@ app = Application(
 )
 ```
 
+The `Application` class is used to define an application:
+
+- the `id` parameter is used to define the [id of the application](https://www.asyncapi.com/docs/reference/specification/v3.0.0#A2SIdString). It must conform to the URI format, according to [RFC3986](https://datatracker.ietf.org/doc/html/rfc3986).
+
+- the `version` parameter is used to define the [version found in the application info](https://www.asyncapi.com/docs/reference/specification/v3.0.0#infoObject).
+
+- the `name` parameter is used to define the [title found in the application info](https://www.asyncapi.com/docs/reference/specification/v3.0.0#infoObject).
+
+- the `operations` parameter is used to define [the operations](https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationObject) of the application.
+
 ### Implement the operations
 
 ```python
@@ -77,6 +104,14 @@ class CreateUserImpl(CreateUser):
         user_id = "123"
         await message.respond(CreatedUser(user_id=user_id))
 ```
+
+The `handle` method must be an async method, and it must accept a single argument of type `Message`.
+
+The `handle` method must not return a value. Instead, use the `respond` method to send a response back to the sender.
+
+This is because the `contracts` framework is designed to work with different backends, and the `respond` method is a generic way to send a response back to the sender, regardless of the backend.
+
+Also, returning a value does not allow to distinguish between a successful response and an error response. By using the `respond` method, it is implied that the response is a successful response. If you want to send an error response, you can use the `respond_error` method.
 
 ### Start the application using a backend
 
@@ -103,6 +138,22 @@ async def setup(ctx: micro.Context) -> None:
 ```
 > Note: At the time of writing, an application MAY be started without implementations for all operations. However, this will change in the future, and an error will be raised if an operation is not implemented in order to match with AsyncAPI spec.
 > See https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationsObject
+
+### Generate AsyncAPI specification
+
+```python
+from contracts.specification import build_spec
+
+
+spec = build_spec(app)
+print(spec.export_json())
+```
+
+The `build_spec` function is used to generate an AsyncAPI specification from an application.
+
+The output of the `export_json` method is a JSON string representing the AsyncAPI specification.
+
+You can checkout the output of the example project: [examples/demo_project/asyncapi.json](examples/demo_project/asyncapi.json)
 
 ## Motivation
 

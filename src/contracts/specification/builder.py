@@ -157,7 +157,7 @@ def build_spec(
         )
         # Add operation
         spec.components.operations[ep_spec.name] = Operation(
-            action=Action.RECEIVE,
+            action=Action.SEND,
             channel=channel_ref,
             description=ep.__doc__,
             reply=reply,

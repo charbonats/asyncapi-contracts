@@ -1,0 +1,118 @@
+{
+    "asyncapi": "3.0.0",
+    "id": "https://github.com/charbonats/asyncapi-contracts/examples/demo_project",
+    "info": {
+        "title": "typed-example",
+        "version": "0.0.1",
+        "description": "Test service",
+        "tags": [
+            {
+                "name": "example"
+            }
+        ],
+        "externalDocs": {
+            "url": "https://github.com/charbonats/asyncapi-contracts"
+        }
+    },
+    "components": {
+        "schemas": {
+            "MyRequest": {
+                "properties": {
+                    "value": {
+                        "title": "Value",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "value"
+                ],
+                "title": "MyRequest",
+                "type": "object"
+            },
+            "MyResponse": {
+                "properties": {
+                    "result": {
+                        "title": "Result",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "result"
+                ],
+                "title": "MyResponse",
+                "type": "object"
+            }
+        },
+        "parameters": {
+            "device_id": {}
+        },
+        "servers": {},
+        "channels": {
+            "MyEndpoint_request": {
+                "address": "foo.{device_id}",
+                "parameters": {
+                    "device_id": {
+                        "$ref": "#/components/parameters/device_id"
+                    }
+                },
+                "messages": {
+                    "MyRequest": {
+                        "$ref": "#/components/messages/MyRequest"
+                    }
+                }
+            },
+            "MyEndpoint_reply": {
+                "summary": "Reply channel for MyEndpoint operation",
+                "messages": {
+                    "MyResponse": {
+                        "$ref": "#/components/messages/MyResponse"
+                    }
+                }
+            }
+        },
+        "messages": {
+            "MyRequest": {
+                "payload": {
+                    "$ref": "#/components/schemas/MyRequest"
+                },
+                "name": "MyRequest",
+                "description": "Schema type."
+            },
+            "MyResponse": {
+                "payload": {
+                    "$ref": "#/components/schemas/MyResponse"
+                },
+                "name": "MyResponse",
+                "description": "Schema type."
+            }
+        },
+        "operations": {
+            "MyEndpoint": {
+                "action": "send",
+                "channel": {
+                    "$ref": "#/components/channels/MyEndpoint_request"
+                },
+                "reply": {
+                    "channel": {
+                        "$ref": "#/components/channels/MyEndpoint_reply"
+                    }
+                }
+            }
+        },
+        "replies": {}
+    },
+    "servers": {},
+    "channels": {
+        "MyEndpoint_request": {
+            "$ref": "#/components/channels/MyEndpoint_request"
+        },
+        "MyEndpoint_reply": {
+            "$ref": "#/components/channels/MyEndpoint_reply"
+        }
+    },
+    "operations": {
+        "MyEndpoint": {
+            "$ref": "#/components/operations/MyEndpoint"
+        }
+    }
+}
