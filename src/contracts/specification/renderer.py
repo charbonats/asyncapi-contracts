@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse
+from starlette.responses import HTMLResponse, PlainTextResponse, FileResponse
 from starlette.routing import Route
 
 from .builder import build_spec
@@ -14,13 +15,26 @@ from .builder import build_spec
 if TYPE_CHECKING:
     from ..application import Application
 
+STATIC = Path(__file__).parent.joinpath("static")
+DEFAULT_CSS = STATIC.joinpath("default.min.css")
+SCRIPT_JS = STATIC.joinpath("asyncapi-web-component.js")
+FAVICON = STATIC.joinpath("favicon.ico")
+
 
 def create_docs_app(
     app: Application,
     docs_path: str = "/",
     asyncapi_path: str = "/asyncapi.json",
+    static_path: str = "/static",
 ) -> Starlette:
     schema = build_spec(app)
+    docs = get_html(
+        f"{app.name} - {app.version}",
+        asyncapi_path,
+        static_path + "/default.min.css",
+        static_path + "/asyncapi-web-component.js",
+        favicon="/favicon.ico",
+    )
 
     async def get_async_api(request: Request) -> PlainTextResponse:
         return PlainTextResponse(
@@ -28,13 +42,25 @@ def create_docs_app(
         )
 
     async def get_docs(request: Request) -> HTMLResponse:
-        return HTMLResponse(DOCS_CONTENT)
+        return HTMLResponse(docs)
+
+    async def get_css(request: Request) -> FileResponse:
+        return FileResponse(DEFAULT_CSS)
+
+    async def get_js(request: Request) -> FileResponse:
+        return FileResponse(SCRIPT_JS)
+
+    async def get_favicon(request: Request) -> FileResponse:
+        return FileResponse(FAVICON)
 
     return Starlette(
         debug=True,
         routes=[
             Route(asyncapi_path, get_async_api),
             Route(docs_path, get_docs),
+            Route(static_path + "/default.min.css", get_css),
+            Route(static_path + "/asyncapi-web-component.js", get_js),
+            Route("/favicon.ico", get_favicon),
         ],
     )
 
@@ -85,10 +111,16 @@ class Server(uvicorn.Server):
                 raise err
 
 
-DOCS_CONTENT = """
-<html>
+def get_html(
+    title: str,
+    asyncapi: str,
+    css: str,
+    js: str,
+    favicon: str,
+) -> str:
+    return f"""<html>
 <style>
-  body {
+  body {{
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -96,19 +128,22 @@ DOCS_CONTENT = """
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
+  }}
 
-  code {
+  code {{
     font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
       monospace;
-  }
+  }}
 </style>
-
+<head>
+    <title>{title}</title>
+    <link rel="icon" href="{favicon}" type="image/x-icon" />
+</head>
 <body>
-  <asyncapi-component schemaUrl="/asyncapi.json"
-    cssImportPath="https://unpkg.com/@asyncapi/react-component@latest/styles/default.min.css">
+  <asyncapi-component schemaUrl="{asyncapi}"
+    cssImportPath="{css}">
   </asyncapi-component>
-  <script src="https://unpkg.com/@asyncapi/web-component@latest/lib/asyncapi-web-component.js" defer></script>
+  <script src="{js}" defer></script>
 </body>
 
 </html>

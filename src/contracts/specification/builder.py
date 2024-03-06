@@ -10,6 +10,7 @@ from .asyncapi import (
     Channel,
     Components,
     Contact,
+    ExternalDocumentation,
     Info,
     License,
     Message,
@@ -67,11 +68,15 @@ def build_spec(
             Tag(
                 name=tag.name,
                 description=tag.description,
-                externalDocs=tag.external_docs,
+                externalDocs=ExternalDocumentation(url=tag.external_docs)
+                if tag.external_docs
+                else None,
             )
             for tag in app.tags
         ],
-        externalDocs=app.external_docs,
+        externalDocs=ExternalDocumentation(url=app.external_docs)
+        if app.external_docs
+        else None,
     )
     # Then create a spec
     spec = AsyncAPI(asyncapi="3.0.0", id=app.id, info=info, components=Components())

@@ -75,6 +75,12 @@ class AsyncAPI(BaseModel):
             return self.model_dump_json(indent=indent, exclude_none=True, by_alias=True)
 
 
+class ExternalDocumentation(BaseModel):
+    url: str
+    """The URL for the target documentation. Value MUST be in the format of a URL."""
+    description: str | None = None
+
+
 class Server(BaseModel):
     """An object representing a message broker, a server or any other kind of computer program capable of sending and/or receiving data."""
 
@@ -105,7 +111,7 @@ class Server(BaseModel):
     tags: list[str] | None = None
     """A list of tags for logical grouping and categorization of servers."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation for this server."""
 
     bindings: dict[str, Any] | None = None
@@ -151,7 +157,7 @@ class Info(BaseModel):
     tags: list[Tag] | None = None
     """"A list of tags for application API documentation control. Tags can be used for logical grouping of applications."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation."""
 
 
@@ -164,7 +170,7 @@ class Tag(BaseModel):
     description: str | None = None
     """A short description of the tag. CommonMark syntax can be used for rich text representation."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation for this tag."""
 
 
@@ -230,7 +236,7 @@ class Message(BaseModel):
     tags: list[Tag] | None = None
     """A list of tags for logical grouping and categorization of messages."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation for this message."""
 
     bindings: dict[str, Any] | None = None
@@ -267,7 +273,7 @@ class Channel(BaseModel):
     tags: list[Tag] | None = None
     """A list of tags for logical grouping and categorization of channels."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation for this channel."""
 
     bindings: dict[str, Any] | None = None
@@ -298,7 +304,7 @@ class Operation(BaseModel):
     tags: list[Tag] | None = None
     """A list of tags for logical grouping and categorization of operations."""
 
-    externalDocs: str | None = None
+    externalDocs: ExternalDocumentation | None = None
     """Additional external documentation for this operation."""
 
     bindings: dict[str, Any] | None = None
