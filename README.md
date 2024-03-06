@@ -12,7 +12,7 @@ It also integrates with [`nats-micro`](https://charbonats.github.io/nats-micro) 
 
 ## Example
 
-Checkout the [example project](example/demo_project/README.md) to see how to use `asyncapi-contracts`.
+Checkout the [example project](examples/demo_project/README.md) to see how to use `asyncapi-contracts`.
 
 ## Motivation
 
