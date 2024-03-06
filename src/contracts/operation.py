@@ -21,11 +21,20 @@ class OperationProtocol(Generic[ParamsT, T, R, E], Protocol):
 
 
 @dataclass
-class ErrorHandler(Generic[E]):
+class ExceptionFormatter(Generic[E]):
     origin: type[BaseException]
     code: int
     description: str
     fmt: Callable[[BaseException], E] | None = None
+
+
+def format_error(
+    origin: type[BaseException],
+    code: int,
+    description: str,
+    fmt: Callable[[BaseException], E] | None = None,
+) -> ExceptionFormatter[E]:
+    return ExceptionFormatter(origin, code, description, fmt)
 
 
 class OperationSpec(Generic[S, ParamsT, T, R, E]):
@@ -39,7 +48,7 @@ class OperationSpec(Generic[S, ParamsT, T, R, E]):
         request: Schema[T],
         response: Schema[R],
         error: Schema[E],
-        catch: Iterable[ErrorHandler[E]] | None = None,
+        catch: Iterable[ExceptionFormatter[E]] | None = None,
         metadata: dict[str, Any] | None = None,
         status_code: int = 200,
     ) -> None:
@@ -145,7 +154,7 @@ class OperationDecorator(Generic[S, ParamsT, T, R, E]):
         error: Schema[E],
         name: str | None = None,
         metadata: dict[str, Any] | None = None,
-        catch: Iterable[ErrorHandler[E]] | None = None,
+        catch: Iterable[ExceptionFormatter[E]] | None = None,
         status_code: int = 200,
     ) -> None:
         self.address = address
@@ -199,7 +208,7 @@ def operation(
     error_schema: None = None,
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[None]] | None = None,
+    catch: Iterable[ExceptionFormatter[None]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[Any, None, None, R, None]:
     ...
@@ -215,7 +224,7 @@ def operation(
     error_schema: type[E] | Schema[E],
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[E]] | None = None,
+    catch: Iterable[ExceptionFormatter[E]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[Any, None, None, R, E]:
     ...
@@ -231,7 +240,7 @@ def operation(
     error_schema: None = None,
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[None]] | None = None,
+    catch: Iterable[ExceptionFormatter[None]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[Any, None, T, R, None]:
     ...
@@ -247,7 +256,7 @@ def operation(
     error_schema: type[E] | Schema[E],
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[E]] | None = None,
+    catch: Iterable[ExceptionFormatter[E]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[Any, None, T, R, E]:
     ...
@@ -263,7 +272,7 @@ def operation(
     error_schema: type[E] | Schema[E],
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[E]] | None = None,
+    catch: Iterable[ExceptionFormatter[E]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[S, ParamsT, None, R, E]:
     ...
@@ -278,7 +287,7 @@ def operation(
     response_schema: None = None,
     error_schema: type[E] | Schema[E],
     name: str | None = None,
-    catch: Iterable[ErrorHandler[E]] | None = None,
+    catch: Iterable[ExceptionFormatter[E]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[S, ParamsT, T, None, E]:
     ...
@@ -293,7 +302,7 @@ def operation(
     response_schema: type[R] | Schema[R],
     error_schema: None = None,
     name: str | None = None,
-    catch: Iterable[ErrorHandler[None]] | None = None,
+    catch: Iterable[ExceptionFormatter[None]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[S, ParamsT, T, R, None]:
     ...
@@ -308,7 +317,7 @@ def operation(
     response_schema: type[R] | Schema[R],
     error_schema: type[E] | Schema[E],
     name: str | None = None,
-    catch: Iterable[ErrorHandler[E]] | None = None,
+    catch: Iterable[ExceptionFormatter[E]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[S, ParamsT, T, R, E]:
     ...
@@ -323,7 +332,7 @@ def operation(
     error_schema: Any = type(None),
     name: str | None = None,
     metadata: dict[str, Any] | None = None,
-    catch: Iterable[ErrorHandler[Any]] | None = None,
+    catch: Iterable[ExceptionFormatter[Any]] | None = None,
     status_code: int = 200,
 ) -> OperationDecorator[Any, Any, Any, Any, Any]:
     if not isinstance(request_schema, Schema):

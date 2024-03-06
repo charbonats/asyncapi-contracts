@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from contracts import ErrorHandler, operation
+from contracts import format_error, operation
 
 
 @dataclass
@@ -33,7 +33,7 @@ class MyResponse:
     response_schema=MyResponse,
     error_schema=str,
     catch=[
-        ErrorHandler(
+        format_error(
             ValueError,
             400,
             "Bad request",

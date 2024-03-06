@@ -87,7 +87,8 @@ app = Application(
     id="http://example.com/user-service",
     version="0.0.1",
     name="user-service",
-    operations=[
+    title="User Service",
+    components=[
         CreateUser,
     ],
 )
@@ -99,14 +100,16 @@ The `Application` class is used to define an application:
 
 - the `version` parameter is used to define the [version found in the application info](https://www.asyncapi.com/docs/reference/specification/v3.0.0#infoObject).
 
-- the `name` parameter is used to define the [title found in the application info](https://www.asyncapi.com/docs/reference/specification/v3.0.0#infoObject).
+- the `name` parameter is used to define the name of the application. It does not correspond to any field in the AsyncAPI specification but is used as service name when starting the application using a backend.
 
-- the `operations` parameter is used to define [the operations](https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationObject) of the application.
+- the `title` parameter is used to define the [title found in the application info](https://www.asyncapi.com/docs/reference/specification/v3.0.0#infoObject).
+
+- the `components` parameter is used to define [the operations](https://www.asyncapi.com/docs/reference/specification/v3.0.0#operationObject) of the application.
 
 ### Generate AsyncAPI specification
 
 ```python
-from contracts.specification import build_spec
+from contracts import build_spec
 
 
 spec = build_spec(app)

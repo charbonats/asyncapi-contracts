@@ -10,13 +10,16 @@ from .message import Message
 from .event import Event
 
 # The decorator and helper classes for operations
-from .operation import ErrorHandler, operation
+from .operation import format_error, operation
 
 # The decorator and helper classes for events
 from .event import event, consumer
 
 # The class used to define the schema of the messages
 from .schema import schema
+
+# The function used to generate specs
+from .specification import build_spec
 
 
 __all__ = [
@@ -30,10 +33,12 @@ __all__ = [
     "schema",
     # Operation related
     "operation",
-    "ErrorHandler",
+    "format_error",
     "Message",
     # Consumers related
     "Event",
     "event",
     "consumer",
+    # Async API related
+    "build_spec",
 ]
