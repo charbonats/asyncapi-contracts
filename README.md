@@ -14,6 +14,89 @@ It also integrates with [`nats-micro`](https://charbonats.github.io/nats-micro) 
 
 Checkout the [example project](examples/demo_project/README.md) to see how to use `asyncapi-contracts`.
 
+## Basic Usage
+
+### Defining operations
+
+```python
+from dataclasses import dataclass
+
+from contracts import operation
+
+
+@dataclass
+class CreateUserRequest:
+    username: str
+    email: str
+
+
+@dataclass
+class CreatedUser:
+    user_id: str
+
+
+@operation(
+    address="user.create",
+    request_schema=CreateUserRequest,
+    response_schema=CreatedUser,
+)
+class CreateUser:
+    """Operation to create a new user."""
+```
+
+### Defining an application
+
+```python
+from contracts import Application
+
+from .operations import CreateUser
+
+app = Application(
+    id="http://example.com/user-service",
+    version="0.0.1",
+    name="user-service",
+    operations=[
+        CreateUser,
+    ],
+)
+```
+
+### Implement the operations
+
+```python
+from contracts import Message
+from .operations import CreateUser, CreateUserRequest, CreatedUser
+
+
+class CreateUserImpl(CreateUser):
+    async def handle(self, message: Message[CreateUser]) -> None:
+        # Create a user
+        user_id = "123"
+        await message.respond(CreatedUser(user_id=user_id))
+```
+
+### Start the application using a backend
+
+```python
+import nats_contrib.micro as micro
+from contracts.backends.micro.micro import start_micro_server
+
+from .app import app
+from .implementation import CreateUserImpl
+
+async def setup(ctx: micro.Context) -> None:
+    """An example setup function to start a micro service."""
+
+    # Mount the app
+    await start_micro_server(
+        ctx,
+        app,
+        [
+            CreateUserImpl(),
+        ],
+    )
+```
+
 ## Motivation
 
 I always wanted to try design first approach for my APIs.
