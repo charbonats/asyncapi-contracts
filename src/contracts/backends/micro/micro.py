@@ -14,8 +14,8 @@ from contracts.specification.renderer import create_docs_server
 from contracts.application import Application, validate
 from contracts.interfaces.client import OperationError, Reply, Client as BaseClient
 from contracts.interfaces.server import Server as BaseServer
-from contracts.message import Message
-from contracts.operation import Operation, OperationRequest, OperationSpec
+from contracts.message import Message, OT
+from contracts.operation import Operation, OperationRequest
 from contracts.types import E, ParamsT, R, T
 
 
@@ -32,7 +32,7 @@ async def _add_operation(
             await operation.handle(
                 MicroMessage(
                     request,
-                    operation.spec,
+                    operation,
                 )
             )
         except BaseException as e:
@@ -135,29 +135,31 @@ class MicroServer(BaseServer[Service]):
         return Ctx()
 
 
-class MicroMessage(Message[ParamsT, T, R, E]):
+class MicroMessage(Message[OT]):
     """A message received as a request."""
 
     def __init__(
         self,
         request: MicroRequest,
-        spec: OperationSpec[Any, ParamsT, T, R, E],
+        operation: OT,
     ) -> None:
-        data = spec.request.type_adapter.decode(request.data())
-        params = spec.address.get_params(request.subject())
+        data = operation.spec.request.type_adapter.decode(request.data())
+        params = operation.spec.address.get_params(request.subject())
         self._request = request
         self._data = data
         self._params = params
-        self._response_type_adapter = spec.response.type_adapter
-        self._error_type_adapter = spec.error.type_adapter
-        self._status_code = spec.status_code
-        self._error_content_type = spec.error.content_type
-        self._response_content_type = spec.response.content_type
+        self._response_type_adapter = operation.spec.response.type_adapter
+        self._error_type_adapter = operation.spec.error.type_adapter
+        self._status_code = operation.spec.status_code
+        self._error_content_type = operation.spec.error.content_type
+        self._response_content_type = operation.spec.response.content_type
 
-    def params(self) -> ParamsT:
+    def params(
+        self: MicroMessage[Operation[Any, ParamsT, Any, Any, Any]],
+    ) -> ParamsT:
         return self._params
 
-    def payload(self) -> T:
+    def payload(self: MicroMessage[Operation[Any, Any, T, Any, Any]]) -> T:
         return self._data
 
     def headers(self) -> dict[str, str]:

@@ -4,7 +4,7 @@ from types import new_class
 from typing import Any, Generic
 
 from .message import Message
-from .operation import Operation
+from .operation import Operation, OperationRequest
 from .types import E, ParamsT, R, S, T
 
 
@@ -19,17 +19,16 @@ class NoResponseError(Exception):
     """
 
 
-class StubMessage(Message[ParamsT, T, R, E]):
+class StubMessage:
     """A message received as a request."""
 
     def __init__(
         self,
-        params: ParamsT,
-        data: T,
+        request: OperationRequest[Any, Any, Any, Any],
         headers: dict[str, str] | None = None,
     ) -> None:
-        self._params = params
-        self._data = data
+        self._params = request.params
+        self._data = request.payload
         self._headers = headers or {}
         self._response_headers: dict[str, str] = ...  # type: ignore[reportAttributeAccessIssue]
         self._response_data: R = ...  # type: ignore[reportAttributeAccessIssue]
@@ -37,10 +36,10 @@ class StubMessage(Message[ParamsT, T, R, E]):
         self._response_error_code: int = ...  # type: ignore[reportAttributeAccessIssue]
         self._response_error_description: str = ...  # type: ignore[reportAttributeAccessIssue]
 
-    def params(self) -> ParamsT:
+    def params(self) -> Any:
         return self._params
 
-    def payload(self) -> T:
+    def payload(self) -> Any:
         return self._data
 
     def headers(self) -> dict[str, str]:
@@ -65,13 +64,13 @@ class StubMessage(Message[ParamsT, T, R, E]):
         self._response_error_code = code
         self._response_error_description = description
 
-    def response_data(self) -> R:
+    def response_data(self) -> Any:
         """Use this method durign tests to get the response data."""
         if self._response_data is ...:
             raise NoResponseError("No response has been set")
         return self._response_data
 
-    def response_error(self) -> E:
+    def response_error(self) -> Any:
         """Use this method during tests to get the response error."""
         if self._response_error is ...:
             raise NoResponseError("No response has been set")
@@ -117,16 +116,16 @@ class StubOperation(Generic[S, ParamsT, T, R, E]):
             raise ValueError("Either result or error must be set, not both")
         self._result = result
         self._error = error
-        self._called_with: list[Message[ParamsT, T, R, E]] = []
+        self._called_with: list[Message[Operation[S, ParamsT, T, R, E]]] = []
 
-    async def handle(self, request: Message[Any, Any, R, E]) -> None:
+    async def handle(self, request: Message[Operation[S, ParamsT, T, R, E]]) -> None:
         self._called_with.append(request)
         if self._result is not ...:
             await request.respond(self._result)
         else:
             await request.respond_error(500, "Internal Server Error", data=self._error)
 
-    def called_with(self) -> list[Message[ParamsT, T, R, E]]:
+    def called_with(self) -> list[Message[Operation[S, ParamsT, T, R, E]]]:
         return self._called_with
 
 
@@ -148,9 +147,7 @@ def make_operation(
 
 
 def make_message(
-    operation: Operation[S, ParamsT, T, R, E],
-    params: ParamsT,
-    data: T,
+    request: OperationRequest[Any, Any, Any, Any],
     headers: dict[str, str] | None = None,
-) -> StubMessage[ParamsT, T, R, E]:
-    return StubMessage(params, data, headers)
+) -> StubMessage:
+    return StubMessage(request, headers)

@@ -1,21 +1,26 @@
 from __future__ import annotations
 
 import abc
-from typing import Any, Generic, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from .types import E, ParamsT, R, T
 
+if TYPE_CHECKING:
+    from .operation import Operation
 
-class Message(Generic[ParamsT, T, R, E], metaclass=abc.ABCMeta):
+OT = TypeVar("OT", bound="Operation[Any, Any, Any, Any, Any]")
+
+
+class Message(Generic[OT], metaclass=abc.ABCMeta):
     """A message received as a request."""
 
     @abc.abstractmethod
-    def params(self) -> ParamsT:
+    def params(self: Message[Operation[Any, ParamsT, Any, Any, Any]]) -> ParamsT:
         """Get the message parameters."""
         raise NotImplementedError
 
     @abc.abstractmethod
-    def payload(self) -> T:
+    def payload(self: Message[Operation[Any, Any, T, Any, Any]]) -> T:
         """Get the message payload."""
         raise NotImplementedError
 
@@ -27,7 +32,7 @@ class Message(Generic[ParamsT, T, R, E], metaclass=abc.ABCMeta):
     @overload
     @abc.abstractmethod
     async def respond(
-        self: Message[ParamsT, T, None, E],
+        self: Message[Operation[Any, Any, Any, None, Any]],
         *,
         headers: dict[str, str] | None = None,
     ) -> None:
@@ -36,7 +41,7 @@ class Message(Generic[ParamsT, T, R, E], metaclass=abc.ABCMeta):
     @overload
     @abc.abstractmethod
     async def respond(
-        self: Message[ParamsT, T, R, E],
+        self: Message[Operation[Any, Any, Any, R, Any]],
         data: R,
         *,
         headers: dict[str, str] | None = None,
@@ -53,7 +58,7 @@ class Message(Generic[ParamsT, T, R, E], metaclass=abc.ABCMeta):
     @overload
     @abc.abstractmethod
     async def respond_error(
-        self: Message[ParamsT, T, R, None],
+        self: Message[Operation[Any, Any, Any, Any, None]],
         code: int,
         description: str,
         *,
@@ -64,7 +69,7 @@ class Message(Generic[ParamsT, T, R, E], metaclass=abc.ABCMeta):
     @overload
     @abc.abstractmethod
     async def respond_error(
-        self: Message[ParamsT, T, R, E],
+        self: Message[Operation[Any, ParamsT, Any, Any, E]],
         code: int,
         description: str,
         *,

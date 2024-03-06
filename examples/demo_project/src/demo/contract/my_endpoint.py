@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from contracts import ErrorHandler, Message, operation
-
-# Purely optional, but it can be used to type hint the request
-MyEndpointRequest = Message["MyParams", "MyRequest", "MyResponse", str]
+from contracts import ErrorHandler, operation
 
 
 @dataclass

@@ -12,7 +12,9 @@ from .types import E, P, ParamsT, R, S, T
 
 
 class OperationProtocol(Generic[ParamsT, T, R, E], Protocol):
-    def handle(self, request: Message[ParamsT, T, R, E]) -> Coroutine[Any, Any, None]:
+    def handle(
+        self, request: Message[Operation[S, ParamsT, T, R, E]]
+    ) -> Coroutine[Any, Any, None]:
         ...
 
 
@@ -105,7 +107,9 @@ class Operation(Generic[S, ParamsT, T, R, E], metaclass=abc.ABCMeta):
         cls._spec = spec
 
     @abc.abstractmethod
-    def handle(self, request: Message[ParamsT, T, R, E]) -> Coroutine[Any, Any, None]:
+    def handle(
+        self, request: Message[Operation[S, ParamsT, T, R, E]]
+    ) -> Coroutine[Any, Any, None]:
         raise NotImplementedError
 
     @property

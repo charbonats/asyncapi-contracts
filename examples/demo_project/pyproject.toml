@@ -17,7 +17,7 @@ package-dir = {"" = "src"}
 version = { attr = "demo.__about__.__version__" }
 
 [tool.microb.target.default]
-entrypoint = ["micro", "run", "demo.server.main:setup"]
+entrypoint = ["micro", "run", "demo.infra:setup"]
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]

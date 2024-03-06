@@ -40,6 +40,8 @@ def default_json_adapter() -> TypeAdapterFactory:
 
         return PydanticV2JSONAdapterFactory()
 
+    raise ImportError("Cannot find a suitable pydantic version.")
+
 
 def sniff_type_adapter(typ: type[T]) -> TypeAdapter[T]:
     from .standard import RawTypeAdapter
