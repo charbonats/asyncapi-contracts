@@ -8,6 +8,12 @@ You must first define operations using decorated classes, and then define an app
 
 Once an application is defined, you can generate AsyncAPI specification from it.
 
+It also integrates with [`nats-micro`](https://charbonats.github.io/nats-micro) to easily deploy an application as a NATS Micro service.
+
+## Example
+
+Checkout the [example project](example/demo_project/README.md) to see how to use `asyncapi-contracts`.
+
 ## Motivation
 
 I always wanted to try design first approach for my APIs.
