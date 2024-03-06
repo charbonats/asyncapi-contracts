@@ -34,7 +34,7 @@ class PydanticV1JSONAdapter(TypeAdapter[T]):
             if data:
                 raise ValueError("No value expected")
             return None  # type: ignore
-        return pydantic.parse_raw_as(self.typ, data)
+        return pydantic.parse_raw_as(self.typ, data)  # type: ignore
 
 
 class PydanticV1JSONAdapterFactory(TypeAdapterFactory):

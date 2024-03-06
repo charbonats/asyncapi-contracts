@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import contracts
 from nats import connect
-from contracts.backends.micro import Client
+from contracts.interfaces import Client, OperationError
+from contracts.backends.micro import Client as MicroClient
 
 from demo.contract.my_endpoint import MyEndpoint, MyRequest
 
 
 async def do_request(
-    client: contracts.Client,
+    client: Client,
 ) -> None:
     """An example function to send a request to a micro service."""
     # This will not raise an error if the reply received indicates
@@ -24,7 +24,7 @@ async def do_request(
     try:
         data = response.data()
         print(data)
-    except contracts.OperationError:
+    except OperationError:
         # You can access the decoded error in such case
         error = response.error()
         print(error)
@@ -36,5 +36,5 @@ async def do_request(
 async def main() -> None:
     """An example main function to send a request to a micro service."""
     nc = await connect()
-    client = Client(nc)
+    client = MicroClient(nc)
     await do_request(client)

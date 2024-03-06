@@ -19,12 +19,12 @@ class NoResponseError(Exception):
     """
 
 
-class StubMessage:
+class StubMessage(Message[Operation[Any, ParamsT, T, R, E]]):
     """A message received as a request."""
 
     def __init__(
         self,
-        request: OperationRequest[Any, Any, Any, Any],
+        request: OperationRequest[ParamsT, T, R, E],
         headers: dict[str, str] | None = None,
     ) -> None:
         self._params = request.params
@@ -36,10 +36,10 @@ class StubMessage:
         self._response_error_code: int = ...  # type: ignore[reportAttributeAccessIssue]
         self._response_error_description: str = ...  # type: ignore[reportAttributeAccessIssue]
 
-    def params(self) -> Any:
+    def params(self) -> ParamsT:
         return self._params
 
-    def payload(self) -> Any:
+    def payload(self) -> T:
         return self._data
 
     def headers(self) -> dict[str, str]:
@@ -147,7 +147,7 @@ def make_operation(
 
 
 def make_message(
-    request: OperationRequest[Any, Any, Any, Any],
+    request: OperationRequest[ParamsT, T, R, E],
     headers: dict[str, str] | None = None,
-) -> StubMessage:
+) -> StubMessage[ParamsT, T, R, E]:
     return StubMessage(request, headers)
