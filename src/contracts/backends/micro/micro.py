@@ -94,7 +94,7 @@ async def start_micro_server(
     return await ctx.enter(server.add_application(app, *components))
 
 
-class MicroServer(BaseServer[Service]):
+class MicroServer(BaseServer[Service, Endpoint, Any]):
     def __init__(
         self,
         client: NatsClient,
@@ -109,7 +109,6 @@ class MicroServer(BaseServer[Service]):
         self.now = now
         self.id_generator = id_generator
         self.api_prefix = api_prefix
-        self._srv: Service | None = None
 
     def add_application(
         self,
@@ -131,7 +130,6 @@ class MicroServer(BaseServer[Service]):
             id_generator=self.id_generator,
             api_prefix=self.api_prefix,
         )
-        self._srv = srv
 
         class Ctx:
             async def __aenter__(self) -> Service:
@@ -147,14 +145,15 @@ class MicroServer(BaseServer[Service]):
 
     async def add_operation(
         self,
+        app: Service,
         operation: BaseOperation[Any, Any, Any, Any, Any],
         queue_group: str | None = None,
-    ) -> None:
-        if not self._srv:
-            raise ValueError("Server not started")
-        await _add_operation(self._srv, operation, queue_group)
+    ) -> Endpoint:
+        return await _add_operation(app, operation, queue_group)
 
-    async def add_consumer(self, consumer: EventConsumer[Any, Any, Any]) -> None:
+    async def add_consumer(
+        self, app: Service, consumer: EventConsumer[Any, Any, Any]
+    ) -> Any:
         raise NotImplementedError
 
 
@@ -166,16 +165,16 @@ class MicroMessage(Message[OT]):
         request: MicroRequest,
         operation: OT,
     ) -> None:
-        data = operation.spec.request.type_adapter.decode(request.data())
+        data = operation.spec.payload.type_adapter.decode(request.data())
         params = operation.spec.address.get_params(request.subject())
         self._request = request
         self._data = data
         self._params = params
-        self._response_type_adapter = operation.spec.response.type_adapter
+        self._response_type_adapter = operation.spec.reply_payload.type_adapter
         self._error_type_adapter = operation.spec.error.type_adapter
         self._status_code = operation.spec.status_code
         self._error_content_type = operation.spec.error.content_type
-        self._response_content_type = operation.spec.response.content_type
+        self._response_content_type = operation.spec.reply_payload.content_type
 
     def params(
         self: MicroMessage[BaseOperation[Any, ParamsT, Any, Any, Any]],

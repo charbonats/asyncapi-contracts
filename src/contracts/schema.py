@@ -9,7 +9,13 @@ from .types import T
 
 @dataclass
 class Schema(Generic[T]):
-    """Schema type."""
+    """Schema type.
+
+    Args:
+        type: The type of the schema.
+        content_type: The content type of the schema.
+        type_adapter: The type adapter for the schema.
+    """
 
     type: type[T]
     content_type: str
@@ -21,6 +27,16 @@ def schema(
     content_type: str | None = None,
     type_adapter: TypeAdapter[T] | None = None,
 ) -> Schema[T]:
+    """Create a schema for the given type.
+
+    Args:
+        type: The type of the schema.
+        content_type: The content type of the schema.
+        type_adapter: The type adapter for the schema.
+
+    Returns:
+        The schema for the given type.
+    """
     if not content_type:
         content_type = sniff_content_type(type)
     if not type_adapter:
@@ -29,6 +45,14 @@ def schema(
 
 
 def sniff_content_type(typ: type[Any]) -> str:
+    """Sniff the content type for the given type.
+
+    Args:
+        typ: The type to sniff the content type for.
+
+    Returns:
+        The content type for the given type.
+    """
     if is_dataclass(typ):
         return "application/json"
     if hasattr(typ, "model_fields"):

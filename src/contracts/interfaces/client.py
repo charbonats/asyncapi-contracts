@@ -61,7 +61,7 @@ class Reply(Generic[ParamsT, T, R, E]):
         if self._error:
             raise self._error
         assert self._reply
-        return self.request.spec.response.type_adapter.decode(self._reply.data)
+        return self.request.spec.reply_payload.type_adapter.decode(self._reply.data)
 
     def error(self) -> E:
         """Get the error."""
@@ -97,8 +97,7 @@ class Client(metaclass=abc.ABCMeta):
         *,
         headers: dict[str, str] | None = None,
         timeout: float = 1,
-    ) -> Reply[ParamsT, T, R, E]:
-        ...
+    ) -> Reply[ParamsT, T, R, E]: ...
 
     @overload
     async def send(
@@ -106,8 +105,7 @@ class Client(metaclass=abc.ABCMeta):
         msg: EventPublication[ParamsT, T],
         *,
         headers: dict[str, str] | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def send(
         self,
@@ -117,7 +115,7 @@ class Client(metaclass=abc.ABCMeta):
     ) -> Reply[ParamsT, T, R, E] | None:
         """Send a request or an event."""
         if isinstance(msg, OperationRequest):
-            data = msg.spec.request.type_adapter.encode(msg.payload)
+            data = msg.spec.payload.type_adapter.encode(msg.payload)
             try:
                 reply = await self.__send_request__(
                     msg.subject, payload=data, headers=headers, timeout=timeout

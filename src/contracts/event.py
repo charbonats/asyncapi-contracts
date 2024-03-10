@@ -68,7 +68,7 @@ class BaseEvent(Generic[S, ParamsT, T]):
         )
 
 
-class Event(Generic[ET]):
+class Event(Generic[ET], metaclass=abc.ABCMeta):
     """An event received as a request."""
 
     @abc.abstractmethod
@@ -86,14 +86,17 @@ class Event(Generic[ET]):
         """Get the event headers."""
         raise NotImplementedError
 
+    @abc.abstractmethod
     async def ack(self) -> None:
         """Acknowledge the event."""
         raise NotImplementedError
 
+    @abc.abstractmethod
     async def nack(self, delay: float | None = None) -> None:
         """Not acknowledge the event."""
         raise NotImplementedError
 
+    @abc.abstractmethod
     async def term(self) -> None:
         """Terminate the event."""
         raise NotImplementedError

@@ -1,7 +1,15 @@
+"""The testing module defines classes and functions for testing.
+
+Use the `make_operation`, `make_message`, and `make_event` functions
+to create instances of the `StubOperation`, `StubMessage`, and `StubEvent`
+classes for testing.
+"""
+
 from __future__ import annotations
 
 from types import new_class
 from typing import Any, Generic
+from typing_extensions import Literal
 
 from .event import BaseEvent, Event
 
@@ -109,7 +117,7 @@ class StubEvent(Event[BaseEvent[Any, ParamsT, T]]):
         self._params = params
         self._data = payload
         self._headers = headers or {}
-        self._acknowledged = False
+        self._status: Literal["pending", "acked", "nacked", "termed"] = "pending"
 
     def params(self) -> ParamsT:
         return self._params
@@ -121,10 +129,28 @@ class StubEvent(Event[BaseEvent[Any, ParamsT, T]]):
         return self._headers
 
     async def ack(self) -> None:
-        self._acknowledged = True
+        if self._status != "pending":
+            raise ValueError("Event has already been acknowledged")
+        self._status = "acked"
 
     def acknowledged(self) -> bool:
-        return self._acknowledged
+        return self._status == "acked"
+
+    async def nack(self, delay: float | None = None) -> None:
+        if self._status != "pending":
+            raise ValueError("Event has already been acknowledged")
+        self._status = "nacked"
+
+    def nacked(self) -> bool:
+        return self._status == "nacked"
+
+    async def term(self) -> None:
+        if self._status != "pending":
+            raise ValueError("Event has already been acknowledged")
+        self._status = "termed"
+
+    def termed(self) -> bool:
+        return self._status == "termed"
 
 
 class StubOperation(Generic[S, ParamsT, T, R, E]):

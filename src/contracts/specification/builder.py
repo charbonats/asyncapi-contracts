@@ -93,7 +93,7 @@ def build_spec(
             )
             # Add request schema
             request = (
-                ep._spec.request  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
+                ep._spec.payload  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
             )
             schema = schema_adapter(request.type)
             spec.components.schemas[request.type.__name__] = schema
@@ -101,7 +101,7 @@ def build_spec(
                 f"#/components/schemas/{request.type.__name__}"
             )
             # Add response schema
-            response = ep_spec.response
+            response = ep_spec.reply_payload
             schema = schema_adapter(response.type)
             spec.components.schemas[response.type.__name__] = schema
             response_ref = Reference.from_ref(
