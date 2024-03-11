@@ -7,7 +7,7 @@ from dataclasses import asdict, is_dataclass
 from enum import Enum
 from typing import Any
 
-from .interface import T, TypeAdapter, TypeAdapterFactory
+from contracts.core.types import T, TypeAdapter, TypeAdapterFactory
 
 
 class RawTypeAdapter(TypeAdapter[T]):

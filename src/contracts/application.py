@@ -1,55 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Iterable
 
-from .operation import BaseOperation
-from .event import EventConsumer
-
-
-@dataclass
-class Contact:
-    """Contact information for the exposed API."""
-
-    name: str | None = None
-    url: str | None = None
-    email: str | None = None
-
-
-def contact(
-    name: str | None = None, url: str | None = None, email: str | None = None
-) -> Contact:
-    """Create a new contact."""
-    return Contact(name, url, email)
-
-
-@dataclass
-class License:
-    """License information for the exposed API."""
-
-    name: str | None = None
-    url: str | None = None
-
-
-def license(name: str | None = None, url: str | None = None) -> License:
-    """Create a new license."""
-    return License(name, url)
-
-
-@dataclass
-class Tag:
-    """A tag for application API documentation control."""
-
-    name: str
-    description: str | None = None
-    external_docs: str | None = None
-
-
-def tag(
-    name: str, description: str | None = None, external_docs: str | None = None
-) -> Tag:
-    """Create a new tag."""
-    return Tag(name, description, external_docs)
+from .core.application_info import Contact, License, Tag
+from .abc.consumer import BaseConsumer
+from .abc.operation import BaseOperation
 
 
 class Application:
@@ -64,7 +19,7 @@ class Application:
         metadata: dict[str, str] | None = None,
         terms_of_service: str | None = None,
         components: list[
-            type[BaseOperation[Any, Any, Any, Any, Any] | EventConsumer[Any, Any, Any]]
+            type[BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]]
         ]
         | None = None,
         contact: Contact | None = None,
@@ -106,13 +61,13 @@ class Application:
 def validate_operations(
     app: Application,
     components: Iterable[
-        BaseOperation[Any, Any, Any, Any, Any] | EventConsumer[Any, Any, Any]
+        BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]
     ],
-) -> list[BaseOperation[Any, Any, Any, Any, Any]]:
+) -> list[BaseOperation[Any, Any, Any, Any]]:
     subjects: dict[str, str] = {}
-    operations: list[BaseOperation[Any, Any, Any, Any, Any]] = []
+    operations: list[BaseOperation[Any, Any, Any, Any]] = []
     for endpoint in components:
-        if isinstance(endpoint, EventConsumer):
+        if isinstance(endpoint, BaseConsumer):
             continue
         for candidate in app.components:
             if isinstance(endpoint, candidate):
@@ -132,11 +87,11 @@ def validate_operations(
 def validate_consumers(
     app: Application,
     components: Iterable[
-        BaseOperation[Any, Any, Any, Any, Any] | EventConsumer[Any, Any, Any]
+        BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]
     ],
-) -> list[EventConsumer[Any, Any, Any]]:
+) -> list[BaseConsumer[Any, Any, Any]]:
     subjects: dict[str, str] = {}
-    consumers: list[EventConsumer[Any, Any, Any]] = []
+    consumers: list[BaseConsumer[Any, Any, Any]] = []
     for consumer in components:
         if isinstance(consumer, BaseOperation):
             continue

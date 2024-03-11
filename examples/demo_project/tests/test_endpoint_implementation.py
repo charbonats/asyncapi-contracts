@@ -1,9 +1,8 @@
 import pytest
-
-from demo.domain.my_operation import MyEndpointImplementation
 from demo.components.my_operation import MyRequest, MyResponse
+from demo.domain.my_operation import MyEndpointImplementation
 
-from contracts.testing import make_message
+from contracts.testing import make_request
 
 
 @pytest.mark.asyncio
@@ -11,7 +10,7 @@ async def test_my_endpoint_implementation():
     # Create the endpoint implementation
     ep = MyEndpointImplementation(1)
     # Create a new request message
-    request = make_message(
+    request = make_request(
         MyEndpointImplementation.request(
             MyRequest(1),
             device_id="test",
@@ -20,4 +19,4 @@ async def test_my_endpoint_implementation():
     # Call the endpoint implementation
     await ep.handle(request)
     # Check the response
-    assert request.response_data() == MyResponse(result=2)
+    assert request.response_data() == MyResponse(success=True, result=2)

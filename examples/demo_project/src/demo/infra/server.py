@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 
-from contracts.backends.micro import start_micro_server
 from nats_contrib import micro
+
+from contracts.backends.server.micro import start_micro_server
 
 from ..app import app
 from ..domain.my_operation import MyEndpointImplementation

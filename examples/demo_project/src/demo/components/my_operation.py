@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from contracts import format_error, operation
+from contracts import exception, operation
 
 
 @dataclass
@@ -23,21 +23,21 @@ class MyRequest:
 class MyResponse:
     """Fields expected in endpoint reply payload."""
 
+    success: bool
     result: int
 
 
 @operation(
     address="foo.{device_id}",
     parameters=MyParams,
-    request_schema=MyRequest,
-    response_schema=MyResponse,
-    error_schema=str,
+    payload=MyRequest,
+    reply_payload=MyResponse,
     catch=[
-        format_error(
+        exception(
             ValueError,
             400,
             "Bad request",
-            lambda err: "Request failed due to malformed request data",
+            lambda err: MyResponse(False, 0),
         ),
     ],
 )

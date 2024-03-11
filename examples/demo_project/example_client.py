@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from nats import connect
-from contracts.interfaces import Client, OperationError
-from contracts.backends.micro import Client as MicroClient
-
 from demo.components.my_operation import MyOperation, MyRequest
+from nats import connect
+
+from contracts.backends.client.micro import Client as MicroClient
+from contracts.abc.client import Client, OperationError
 
 
 async def do_request(

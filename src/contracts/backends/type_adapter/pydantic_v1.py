@@ -9,7 +9,7 @@ from typing import Any
 
 import pydantic
 
-from .interface import T, TypeAdapter, TypeAdapterFactory
+from contracts.core.types import T, TypeAdapter, TypeAdapterFactory
 
 
 class PydanticV1JSONAdapter(TypeAdapter[T]):

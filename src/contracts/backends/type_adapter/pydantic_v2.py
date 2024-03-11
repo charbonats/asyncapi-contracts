@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pydantic
 
-from .interface import T, TypeAdapter, TypeAdapterFactory
+from contracts.core.types import T, TypeAdapter, TypeAdapterFactory
 
 
 class PydanticV2JSONAdapter(TypeAdapter[T]):

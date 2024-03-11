@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from demo.__about__ import __version__
 
-from contracts import Application, tag, contact
+from contracts import Application, contact, tag
 
 from .components.my_operation import MyOperation
-
 
 app = Application(
     id="https://github.com/charbonats/asyncapi-contracts/examples/demo_project",

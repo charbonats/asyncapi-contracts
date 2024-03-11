@@ -1,26 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import is_dataclass
-from typing import Generic, Protocol, TypeVar
 
-T = TypeVar("T")
-
-
-class TypeAdapterFactory(Protocol):
-    """A type adapter factory is a class providing methods to create type adapters."""
-
-    def __call__(self, schema: type[T]) -> TypeAdapter[T]:
-        ...
-
-
-class TypeAdapter(Protocol, Generic[T]):
-    """A type adapter is a class providing methods to encode and decode data."""
-
-    def encode(self, message: T) -> bytes:
-        ...
-
-    def decode(self, data: bytes) -> T:
-        ...
+from contracts.core.types import T, TypeAdapter, TypeAdapterFactory
 
 
 def default_json_adapter() -> TypeAdapterFactory:

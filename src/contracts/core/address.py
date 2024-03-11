@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field, fields, is_dataclass
-from typing import Any, Generic, overload
-
+from typing import Generic
 
 from .types import ParamsT
 
@@ -14,30 +13,6 @@ SEPARATOR = "."
 # Regular expression used to identify placeholders within event names
 regex = r"\{(.*?)\}"
 pattern = re.compile(regex)
-
-
-@overload
-def new_address(subject: str) -> Address[None]:
-    ...
-
-
-@overload
-def new_address(subject: str, parameters: type[ParamsT]) -> Address[ParamsT]:
-    ...
-
-
-def new_address(subject: str, parameters: type[Any] | None = None) -> Address[Any]:
-    """Create a new address with parameters.
-
-    Args:
-        subject: The subject filter.
-        parameters: The parameters expected to be found on each valid subject matching subject filter.
-            Parameters must be a dataclass or a class with a `__fields__` attribute such as `pydantic.BaseModel`.
-
-    Returns:
-        A new address.
-    """
-    return Address(subject, parameters)
 
 
 class Address(Generic[ParamsT]):

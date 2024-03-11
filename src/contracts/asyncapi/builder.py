@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import pydantic
 
-from contracts.operation import BaseOperation
+from contracts.api import BaseOperation
 
-from .asyncapi import (
+from .specification import (
     Action,
     AsyncAPI,
     Channel,
@@ -91,14 +91,14 @@ def build_spec(
             ep_spec = (
                 ep._spec  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
             )
-            # Add request schema
-            request = (
+            # Add payload schema
+            payload = (
                 ep._spec.payload  # pyright: ignore[reportPrivateUsage,reportGeneralTypeIssues]
             )
-            schema = schema_adapter(request.type)
-            spec.components.schemas[request.type.__name__] = schema
+            schema = schema_adapter(payload.type)
+            spec.components.schemas[payload.type.__name__] = schema
             request_ref = Reference.from_ref(
-                f"#/components/schemas/{request.type.__name__}"
+                f"#/components/schemas/{payload.type.__name__}"
             )
             # Add response schema
             response = ep_spec.reply_payload
@@ -116,15 +116,15 @@ def build_spec(
                     f"#/components/parameters/{param}"
                 )
 
-            # Add request message
+            # Add payload message
             message = Message(
-                name=request.type.__name__,
-                description=request.__doc__,
+                name=payload.type.__name__,
+                description=payload.__doc__,
                 payload=request_ref,
             )
-            spec.components.messages[request.type.__name__] = message
+            spec.components.messages[payload.type.__name__] = message
             request_message_ref = Reference.from_ref(
-                f"#/components/messages/{request.type.__name__}"
+                f"#/components/messages/{payload.type.__name__}"
             )
             # Add response message
             message = Message(
@@ -141,7 +141,7 @@ def build_spec(
                 address=ep_spec.address.subject,
                 parameters=params_refs,
                 messages={
-                    request.type.__name__: request_message_ref,
+                    payload.type.__name__: request_message_ref,
                 },
             )
             channel_ref = Reference.from_ref(

@@ -3,8 +3,9 @@ from __future__ import annotations
 import abc
 from typing import Generic, overload
 
-from ..operation import E, OperationRequest, ParamsT, R, T
-from ..event import EventPublication
+from ..core.types import ParamsT, R, T
+from .event import EventToPublish
+from .operation import RequestToSend
 
 
 class OperationError(Exception):
@@ -27,12 +28,12 @@ class RawReply:
         self.headers = headers
 
 
-class Reply(Generic[ParamsT, T, R, E]):
+class Reply(Generic[ParamsT, T, R]):
     """Reply to a request."""
 
     def __init__(
         self,
-        request: OperationRequest[ParamsT, T, R, E],
+        request: RequestToSend[ParamsT, T, R],
         reply: RawReply | None,
         error: OperationError | None,
     ) -> None:
@@ -63,11 +64,11 @@ class Reply(Generic[ParamsT, T, R, E]):
         assert self._reply
         return self.request.spec.reply_payload.type_adapter.decode(self._reply.data)
 
-    def error(self) -> E:
+    def error(self) -> R:
         """Get the error."""
         if not self._error:
             raise ValueError("No error")
-        return self.request.spec.error.type_adapter.decode(self._error.data)
+        return self.request.spec.reply_payload.type_adapter.decode(self._error.data)
 
 
 class Client(metaclass=abc.ABCMeta):
@@ -93,28 +94,28 @@ class Client(metaclass=abc.ABCMeta):
     @overload
     async def send(
         self,
-        msg: OperationRequest[ParamsT, T, R, E],
+        msg: RequestToSend[ParamsT, T, R],
         *,
         headers: dict[str, str] | None = None,
         timeout: float = 1,
-    ) -> Reply[ParamsT, T, R, E]: ...
+    ) -> Reply[ParamsT, T, R]: ...
 
     @overload
     async def send(
         self,
-        msg: EventPublication[ParamsT, T],
+        msg: EventToPublish[ParamsT, T],
         *,
         headers: dict[str, str] | None = None,
     ) -> None: ...
 
     async def send(
         self,
-        msg: OperationRequest[ParamsT, T, R, E] | EventPublication[ParamsT, T],
+        msg: RequestToSend[ParamsT, T, R] | EventToPublish[ParamsT, T],
         headers: dict[str, str] | None = None,
         timeout: float = 1,
-    ) -> Reply[ParamsT, T, R, E] | None:
+    ) -> Reply[ParamsT, T, R] | None:
         """Send a request or an event."""
-        if isinstance(msg, OperationRequest):
+        if isinstance(msg, RequestToSend):
             data = msg.spec.payload.type_adapter.encode(msg.payload)
             try:
                 reply = await self.__send_request__(

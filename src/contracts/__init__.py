@@ -1,25 +1,19 @@
 from .__about__ import __version__
 
 # The base class for applications
-from .application import Application, tag, contact, license
-
-# The class used to annotate messages received by operations
-from .message import Message
+from .application import Application
 
 # The class used to annotate messages received by consumers
-from .event import Event
+from .abc.event_message import Message
+
+# The class used to annotate messages received by operations
+from .abc.operation_request import Request
 
 # The decorator and helper classes for operations
-from .operation import format_error, operation
-
-# The decorator and helper classes for events
-from .event import event, consumer
-
-# The class used to define the schema of the messages
-from .schema import schema
+from .api import consumer, event, operation, schema, exception, tag, contact, license
 
 # The function used to generate specs
-from .specification import build_spec
+from .asyncapi import build_spec
 
 
 __all__ = [
@@ -33,10 +27,10 @@ __all__ = [
     "schema",
     # Operation related
     "operation",
-    "format_error",
-    "Message",
+    "exception",
+    "Request",
     # Consumers related
-    "Event",
+    "Message",
     "event",
     "consumer",
     # Async API related

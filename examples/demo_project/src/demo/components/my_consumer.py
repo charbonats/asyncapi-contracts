@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-
 from dataclasses import dataclass
 
-from contracts import event, consumer, Event
-from contracts.interfaces import Client
+from contracts import Message, consumer, event
+from contracts.abc.client import Client
 
 
 @dataclass
@@ -39,7 +38,7 @@ class MyConsumer:
 # An implementation of a consumer is similar to an operation
 # This does not belong here, but it's just an example
 class MyConsumerImpl(MyConsumer):
-    async def handle(self, event: Event[MyEvent]) -> None:
+    async def handle(self, event: Message[MyEvent]) -> None:
         print(f"Consuming event headers: {event.headers()}")
         print(f"Consuming event payload: {event.payload()}")
         await event.ack()

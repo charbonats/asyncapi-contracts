@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from contracts import Message
+from contracts import Request
 
 from ..components.my_operation import MyOperation, MyResponse
 
@@ -20,7 +20,7 @@ class MyEndpointImplementation(MyOperation):
 
     foo: int
 
-    async def handle(self, request: Message[MyOperation]) -> None:
+    async def handle(self, request: Request[MyOperation]) -> None:
         """Signature is constrained by endpoint definition."""
 
         # Parameters are extracted from the message subject
@@ -32,6 +32,6 @@ class MyEndpointImplementation(MyOperation):
         logger.debug(f"Request data is: {data}")
 
         # Reply to the request
-        await request.respond(MyResponse(result=data.value + self.foo))
+        await request.respond(MyResponse(success=True, result=data.value + self.foo))
         # We could also respond with an error
         # await request.respond_error(409, "Conflict", data="Some error data")

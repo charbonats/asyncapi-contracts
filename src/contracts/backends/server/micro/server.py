@@ -5,28 +5,26 @@ from typing import Any, AsyncContextManager, Callable, Iterable
 
 from nats.aio.client import Client as NatsClient
 from nats_contrib import micro
-
 from nats_contrib.micro.api import Endpoint, Service
 from nats_contrib.micro.client import Client as BaseMicroClient
-from nats_contrib.micro.client import ServiceError
 from nats_contrib.micro.request import Request as MicroRequest
-from contracts.specification.renderer import create_docs_server
-from contracts.application import Application, validate_consumers, validate_operations
-from contracts.interfaces.client import (
-    OperationError,
-    RawReply,
-    Client as BaseClient,
+
+from contracts.application import (
+    Application,
+    validate_consumers,
+    validate_operations,
 )
-from contracts.interfaces.server import Server as BaseServer
-from contracts.message import Message, OT
-from contracts.operation import BaseOperation
-from contracts.event import EventConsumer
-from contracts.types import ParamsT, T
+from contracts.abc.consumer import BaseConsumer
+from contracts.abc.operation import BaseOperation
+from contracts.abc.operation_request import OT, Request
+from contracts.abc.server import Server as BaseServer
+from contracts.asyncapi.renderer import create_docs_server
+from contracts.core.types import ParamsT, T
 
 
 async def _add_operation(
     service: Service,
-    operation: BaseOperation[Any, Any, Any, Any, Any],
+    operation: BaseOperation[Any, Any, Any, Any],
     queue_group: str | None = None,
 ) -> Endpoint:
     """Add an operation to a service."""
@@ -48,7 +46,7 @@ async def _add_operation(
                     description = error.description
                     data = error.fmt(e) if error.fmt else None
                     if data:
-                        payload = operation.spec.error.type_adapter.encode(data)
+                        payload = operation.spec.reply_payload.type_adapter.encode(data)
                     else:
                         payload = b""
                     await request.respond_error(code, description, data=payload)
@@ -68,7 +66,7 @@ async def start_micro_server(
     ctx: micro.Context,
     app: Application,
     components: Iterable[
-        BaseOperation[Any, Any, Any, Any, Any] | EventConsumer[Any, Any, Any]
+        BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]
     ],
     queue_group: str | None = None,
     now: Callable[[], datetime.datetime] | None = None,
@@ -113,8 +111,7 @@ class MicroServer(BaseServer[Service, Endpoint, Any]):
     def add_application(
         self,
         app: Application,
-        *components: BaseOperation[Any, Any, Any, Any, Any]
-        | EventConsumer[Any, Any, Any],
+        *components: BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any],
     ) -> AsyncContextManager[Service]:
         all_operations = validate_operations(app, components)
         _ = validate_consumers(app, components)
@@ -146,18 +143,18 @@ class MicroServer(BaseServer[Service, Endpoint, Any]):
     async def add_operation(
         self,
         app: Service,
-        operation: BaseOperation[Any, Any, Any, Any, Any],
+        operation: BaseOperation[Any, Any, Any, Any],
         queue_group: str | None = None,
     ) -> Endpoint:
         return await _add_operation(app, operation, queue_group)
 
     async def add_consumer(
-        self, app: Service, consumer: EventConsumer[Any, Any, Any]
+        self, app: Service, consumer: BaseConsumer[Any, Any, Any]
     ) -> Any:
         raise NotImplementedError
 
 
-class MicroMessage(Message[OT]):
+class MicroMessage(Request[OT]):
     """A message received as a request."""
 
     def __init__(
@@ -171,17 +168,15 @@ class MicroMessage(Message[OT]):
         self._data = data
         self._params = params
         self._response_type_adapter = operation.spec.reply_payload.type_adapter
-        self._error_type_adapter = operation.spec.error.type_adapter
         self._status_code = operation.spec.status_code
-        self._error_content_type = operation.spec.error.content_type
         self._response_content_type = operation.spec.reply_payload.content_type
 
     def params(
-        self: MicroMessage[BaseOperation[Any, ParamsT, Any, Any, Any]],
+        self: MicroMessage[BaseOperation[Any, ParamsT, Any, Any]],
     ) -> ParamsT:
         return self._params
 
-    def payload(self: MicroMessage[BaseOperation[Any, Any, T, Any, Any]]) -> T:
+    def payload(self: MicroMessage[BaseOperation[Any, Any, T, Any]]) -> T:
         return self._data
 
     def headers(self) -> dict[str, str]:
@@ -205,50 +200,7 @@ class MicroMessage(Message[OT]):
         headers: dict[str, str] | None = None,
     ) -> None:
         headers = headers or {}
-        if self._error_content_type:
-            headers["Content-Type"] = self._error_content_type
-        response = self._error_type_adapter.encode(data)
+        if self._response_content_type:
+            headers["Content-Type"] = self._response_content_type
+        response = self._response_type_adapter.encode(data)
         await self._request.respond_error(code, description, response, headers)
-
-
-class Client(BaseClient):
-    def __init__(
-        self,
-        client: NatsClient,
-    ) -> None:
-        self._client = BaseMicroClient(client)
-
-    async def __send_event__(
-        self,
-        subject: str,
-        payload: bytes,
-        headers: dict[str, str] | None = None,
-    ) -> None:
-        """Send an event."""
-        await self._client.nc.publish(
-            subject=subject,
-            payload=payload,
-            headers=headers,
-        )
-
-    async def __send_request__(
-        self,
-        subject: str,
-        payload: bytes,
-        headers: dict[str, str] | None = None,
-        timeout: float = 1,
-    ) -> RawReply:
-        """Send a request."""
-        try:
-            response = await self._client.request(
-                subject,
-                payload,
-                headers=headers,
-                timeout=timeout,
-            )
-        except ServiceError as e:
-            raise OperationError(e.code, e.description, e.headers, e.data) from e
-        return RawReply(
-            response.data,
-            response.headers or {},
-        )

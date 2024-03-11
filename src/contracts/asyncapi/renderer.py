@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import uvicorn
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, PlainTextResponse, FileResponse
+from starlette.responses import FileResponse, HTMLResponse, PlainTextResponse
 from starlette.routing import Route
 
 from .builder import build_spec
