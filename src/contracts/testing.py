@@ -8,7 +8,7 @@ classes for testing.
 from __future__ import annotations
 
 from types import new_class
-from typing import Any, Generic
+from typing import Any, Generic, overload
 
 from typing_extensions import Literal
 
@@ -16,6 +16,7 @@ from .abc.event import BaseEvent, MessageToPublish
 from .abc.message import Message
 from .abc.operation import BaseOperation, RequestToSend
 from .abc.request import Request
+from .client import Client, ClientAdapter, RawOperationError, RawReply, Reply
 from .core.types import ParamsT, R, S, T
 
 
@@ -154,6 +155,102 @@ class StubMessage(Message[BaseEvent[Any, ParamsT, T]]):
         return self._status == "termed"
 
 
+class StubAdapter(ClientAdapter):
+    def __init__(
+        self,
+        reply: RawReply | None = None,
+        error: RawOperationError | None = None,
+    ) -> None:
+        self.requests_sent: list[tuple[str, bytes, dict[str, str] | None, float]] = []
+        self.messages_sent: list[tuple[str, bytes, dict[str, str] | None]] = []
+        self.reply = reply
+        self.error = error
+
+    async def send_request(
+        self,
+        subject: str,
+        payload: bytes,
+        headers: dict[str, str] | None = None,
+        timeout: float = 1,
+    ) -> RawReply:
+        self.requests_sent.append((subject, payload, headers, timeout))
+        if self.reply is not None:
+            return self.reply
+        if self.error is not None:
+            raise self.error
+        raise RuntimeError("Stub is not configured")
+
+    async def send_event(
+        self,
+        subject: str,
+        payload: bytes,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        self.messages_sent.append((subject, payload, headers))
+
+
+class StubClient(Client):
+    def __init__(self) -> None:
+        super().__init__(adapter=StubAdapter())
+        self.requests_sent: list[RequestToSend[Any, Any, Any]] = []
+        self.events_published: list[MessageToPublish[Any, Any]] = []
+
+    @property
+    def adapter(self) -> StubAdapter:
+        return self._adapter  # type: ignore[no-any-return]
+
+    @overload
+    async def send(
+        self,
+        msg: RequestToSend[ParamsT, T, R],
+        *,
+        timeout: float = 1,
+        raise_on_error: bool = True,
+    ) -> Reply[ParamsT, T, R]: ...
+
+    @overload
+    async def send(
+        self,
+        msg: MessageToPublish[ParamsT, T],
+        *,
+        raise_on_error: bool = True,
+    ) -> None: ...
+
+    async def send(
+        self,
+        msg: RequestToSend[Any, Any, Any] | MessageToPublish[Any, Any],
+        *,
+        timeout: float = 1,
+        raise_on_error: bool = True,
+    ) -> Reply[Any, Any, Any] | None:
+        if isinstance(msg, RequestToSend):
+            self.requests_sent.append(msg)
+            return await super().send(
+                msg, timeout=timeout, raise_on_error=raise_on_error
+            )
+        elif isinstance(msg, MessageToPublish):
+            self.events_published.append(msg)
+            await super().send(msg)
+        else:
+            raise TypeError(f"Unsupported message type: {type(msg)}")
+
+    def configure_error(self, error: RawOperationError) -> None:
+        self.adapter.error = error
+
+    def configure_reply(
+        self,
+        operation: type[BaseOperation[Any, Any, Any, R]],
+        reply: R,
+        headers: dict[str, str] | None = None,
+    ) -> None:
+        spec = operation._spec  # type: ignore[generalTypeIssues]
+        raw_reply = spec.reply_payload.type_adapter.encode(reply)
+        self.adapter.reply = RawReply(data=raw_reply, headers=headers or {})
+
+    def configure_raw_reply(self, raw_reply: RawReply) -> None:
+        self.adapter.reply = raw_reply
+
+
 class StubOperation(Generic[S, ParamsT, T, R]):
     """A stub operation for testing."""
 
@@ -220,3 +317,7 @@ def make_message(
     message: MessageToPublish[ParamsT, T],
 ) -> StubMessage[ParamsT, T]:
     return StubMessage(message)
+
+
+def make_client() -> StubClient:
+    return StubClient()

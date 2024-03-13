@@ -24,6 +24,17 @@ class EventSpec(Generic[S, ParamsT, T]):
         self.payload = payload
         self.metadata = metadata or {}
 
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, EventSpec):
+            return False
+        return (
+            self.address == __value.address
+            and self.name == __value.name
+            and self.parameters == __value.parameters
+            and self.payload == __value.payload
+            and self.metadata == __value.metadata
+        )
+
 
 class MessageToPublish(Generic[ParamsT, T]):
     def __init__(
@@ -39,3 +50,14 @@ class MessageToPublish(Generic[ParamsT, T]):
         self.payload = payload
         self.headers = headers or {}
         self._spec = spec
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, MessageToPublish):
+            return False
+        return (
+            self.subject == __value.subject
+            and self.params == __value.params
+            and self.payload == __value.payload
+            and self.headers == __value.headers
+            and self._spec == __value._spec
+        )

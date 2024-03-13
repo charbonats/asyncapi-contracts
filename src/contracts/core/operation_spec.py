@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Iterable, cast
+from typing import Any, Generic, cast
 
 from .address import Address
 from .exception_formatter import ExceptionFormatter
@@ -18,7 +18,7 @@ class OperationSpec(Generic[S, ParamsT, T, R]):
         parameters: ParametersFactory[S, ParamsT],
         payload: Schema[T],
         reply_payload: Schema[R],
-        catch: Iterable[ExceptionFormatter[R]] | None = None,
+        catch: list[ExceptionFormatter[R]] | None = None,
         metadata: dict[str, Any] | None = None,
         status_code: int = 200,
     ) -> None:
@@ -30,6 +30,20 @@ class OperationSpec(Generic[S, ParamsT, T, R]):
         self.catch = catch or []
         self.metadata = metadata or {}
         self.status_code = status_code
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, OperationSpec):
+            return False
+        return (
+            self.address == __value.address
+            and self.name == __value.name
+            and self.parameters == __value.parameters
+            and self.payload == __value.payload
+            and self.reply_payload == __value.reply_payload
+            and self.catch == __value.catch
+            and self.metadata == __value.metadata
+            and self.status_code == __value.status_code
+        )
 
 
 class RequestToSend(Generic[ParamsT, T, R]):
@@ -48,3 +62,13 @@ class RequestToSend(Generic[ParamsT, T, R]):
         self.payload = payload
         self.headers = headers or {}
         self._spec = spec
+
+    def __eq__(self, __value: object) -> bool:
+        if not isinstance(__value, RequestToSend):
+            return False
+        return (
+            self.subject == __value.subject
+            and self.params == __value.params
+            and self.payload == __value.payload
+            and self.headers == __value.headers
+        )

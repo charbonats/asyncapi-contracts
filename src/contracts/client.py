@@ -125,9 +125,9 @@ class Reply(Generic[ParamsT, T, R]):
         return self._error is not None
 
 
-class Client(metaclass=abc.ABCMeta):
+class ClientAdapter(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    async def __send_request__(
+    async def send_request(
         self,
         subject: str,
         payload: bytes,
@@ -137,13 +137,18 @@ class Client(metaclass=abc.ABCMeta):
         """Send a request."""
 
     @abc.abstractmethod
-    async def __send_event__(
+    async def send_event(
         self,
         subject: str,
         payload: bytes,
         headers: dict[str, str] | None = None,
     ) -> None:
         """Send an event."""
+
+
+class Client:
+    def __init__(self, adapter: ClientAdapter) -> None:
+        self._adapter = adapter
 
     @overload
     async def send(
@@ -164,16 +169,16 @@ class Client(metaclass=abc.ABCMeta):
 
     async def send(
         self,
-        msg: RequestToSend[ParamsT, T, R] | MessageToPublish[ParamsT, T],
+        msg: RequestToSend[Any, Any, Any] | MessageToPublish[Any, Any],
         *,
         timeout: float = 1,
         raise_on_error: bool = True,
-    ) -> Reply[ParamsT, T, R] | None:
+    ) -> Reply[Any, Any, Any] | None:
         """Send a request or an event."""
         if isinstance(msg, RequestToSend):
             data = msg._spec.payload.type_adapter.encode(msg.payload)
             try:
-                reply = await self.__send_request__(
+                reply = await self._adapter.send_request(
                     msg.subject, payload=data, headers=msg.headers, timeout=timeout
                 )
             except RawOperationError as e:
@@ -182,7 +187,9 @@ class Client(metaclass=abc.ABCMeta):
                 return Reply(msg, None, e)
             return Reply(msg, reply, None)
         data = msg._spec.payload.type_adapter.encode(msg.payload)
-        return await self.__send_event__(msg.subject, payload=data, headers=msg.headers)
+        return await self._adapter.send_event(
+            msg.subject, payload=data, headers=msg.headers
+        )
 
     def decode_error(
         self,
@@ -192,3 +199,8 @@ class Client(metaclass=abc.ABCMeta):
         """Decode an error."""
         spec = operation._spec  # pyright: ignore[reportGeneralTypeIssues]
         return spec.reply_payload.type_adapter.decode(exc.raw.data)
+
+
+def new_client(adapter: ClientAdapter) -> Client:
+    """Create a new client."""
+    return Client(adapter)

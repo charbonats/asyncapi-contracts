@@ -6,10 +6,22 @@ import pydantic
 
 from contracts.api import BaseOperation
 
-from .specification import (Action, AsyncAPI, Channel, Components, Contact,
-                            ExternalDocumentation, Info, License, Message,
-                            Operation, OperationReply, Parameter, Reference,
-                            Tag)
+from .specification import (
+    Action,
+    AsyncAPI,
+    Channel,
+    Components,
+    Contact,
+    ExternalDocumentation,
+    Info,
+    License,
+    Message,
+    Operation,
+    OperationReply,
+    Parameter,
+    Reference,
+    Tag,
+)
 
 if TYPE_CHECKING:
     from ..application import Application

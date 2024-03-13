@@ -185,7 +185,7 @@ class _OperationDecorator(Generic[S, ParamsT, T, R]):
             payload=self.request,
             reply_payload=self.response,
             metadata=self.metadata,
-            catch=self.catch,
+            catch=list(self.catch),
             status_code=self.status_code,
         )
         new_cls = new_class(cls.__name__, (cls, BaseOperation), kwds={"spec": spec})
