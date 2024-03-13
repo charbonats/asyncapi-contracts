@@ -12,7 +12,7 @@ logger = logging.getLogger("my-endpoint")
 
 @dataclass
 class MyOperationImpl(MyOperation):
-    """An implementation of MyOperation.
+    """An example of operation implementation.
 
     Usage of @dataclass is purely optional.
     Endpoint implementation only needs to inherit from the endpoint class.
