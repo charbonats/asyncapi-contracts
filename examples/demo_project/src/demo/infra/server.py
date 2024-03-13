@@ -8,7 +8,7 @@ from contracts.backends.server.micro import create_micro_server
 from contracts.server import Server
 
 from ..app import app
-from ..domain.my_operation import MyEndpointImplementation
+from ..domain.my_operation import MyOperationImpl
 
 logger = logging.getLogger("app")
 
@@ -51,7 +51,7 @@ async def create_server(ctx: micro.Context) -> Server:
     )
     # Create endpoint instance
     # This could be async and connect to a remote database
-    ep = MyEndpointImplementation(12)
+    ep = MyOperationImpl(12)
     # Bind server operations to application
     server.bind(app, ep)
     return server

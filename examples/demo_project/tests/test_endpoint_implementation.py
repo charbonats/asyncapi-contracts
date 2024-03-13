@@ -1,6 +1,6 @@
 import pytest
 from demo.components.my_operation import MyRequest, MyResponse
-from demo.domain.my_operation import MyEndpointImplementation
+from demo.domain.my_operation import MyOperationImpl
 
 from contracts.testing import make_request
 
@@ -8,10 +8,10 @@ from contracts.testing import make_request
 @pytest.mark.asyncio
 async def test_my_endpoint_implementation():
     # Create the endpoint implementation
-    ep = MyEndpointImplementation(1)
+    ep = MyOperationImpl(1)
     # Create a new request message
     request = make_request(
-        MyEndpointImplementation.request(
+        MyOperationImpl.request(
             MyRequest(1),
             device_id="test",
         )

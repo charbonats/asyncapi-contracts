@@ -37,7 +37,7 @@ class MyResponse:
             ValueError,
             400,
             "Bad request",
-            lambda err: MyResponse(False, 0),
+            lambda _: MyResponse(False, 0),
         ),
     ],
 )
