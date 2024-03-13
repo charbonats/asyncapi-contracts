@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from demo.components.my_operation import MyOperation, MyRequest
+from demo.components.my_operation import MyOperation, MyOptions
 from nats import connect
 
 from contracts.backends.client.micro import Client as MicroClient
@@ -14,7 +14,7 @@ async def do_request(
     # An exception will be raised if the request fails.
     reply = await client.send(
         MyOperation.request(
-            MyRequest(value=2),
+            MyOptions(value=2),
             device_id="123",
             headers={"foo": "bar"},
         ),
@@ -31,7 +31,7 @@ async def do_request_with_error_handling(
 ) -> None:
     """An example function to send a request to a micro service."""
     request = MyOperation.request(
-        MyRequest(value=2),
+        MyOptions(value=2),
         device_id="123",
         headers={"foo": "bar"},
     )
@@ -61,7 +61,7 @@ async def do_request_without_raising_exception(
     """An example function to send a request to a micro service."""
     reply = await client.send(
         MyOperation.request(
-            MyRequest(value=2),
+            MyOptions(value=2),
             device_id="123",
             headers={"foo": "bar"},
         ),

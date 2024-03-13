@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from contracts import Request
 
-from ..components.my_operation import MyOperation, MyResponse
+from ..components.my_operation import MyOperation, MyResult
 
 logger = logging.getLogger("my-endpoint")
 
@@ -32,7 +32,7 @@ class MyOperationImpl(MyOperation):
         result = data.value + self.foo
 
         # Reply to the request
-        await request.respond(MyResponse(success=True, result=result))
+        await request.respond(MyResult(success=True, value=result))
 
         # We could also respond with an error
         # await request.respond_error(409, "Conflict", data=MyResponse(success=False, result=0))

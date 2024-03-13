@@ -1,5 +1,5 @@
 import pytest
-from demo.components.my_operation import MyRequest, MyResponse
+from demo.components.my_operation import MyOptions, MyResult
 from demo.domain.my_operation import MyOperationImpl
 
 from contracts.testing import make_request
@@ -12,11 +12,11 @@ async def test_my_endpoint_implementation():
     # Create a new request message
     request = make_request(
         MyOperationImpl.request(
-            MyRequest(1),
+            MyOptions(1),
             device_id="test",
         )
     )
     # Call the endpoint implementation
     await ep.handle(request)
     # Check the response
-    assert request.response_data() == MyResponse(success=True, result=2)
+    assert request.response_data() == MyResult(success=True, value=2)

@@ -12,7 +12,7 @@ from typing import Any, Generic
 
 from typing_extensions import Literal
 
-from .abc.event import BaseEvent
+from .abc.event import BaseEvent, MessageToPublish
 from .abc.message import Message
 from .abc.operation import BaseOperation, RequestToSend
 from .abc.request import Request
@@ -36,11 +36,10 @@ class StubRequest(Request[BaseOperation[Any, ParamsT, T, R]]):
     def __init__(
         self,
         request: RequestToSend[ParamsT, T, R],
-        headers: dict[str, str] | None = None,
     ) -> None:
         self._params = request.params
         self._data = request.payload
-        self._headers = headers or {}
+        self._headers = request.headers or {}
         self._response_headers: dict[str, str] = ...  # type: ignore[reportAttributeAccessIssue]
         self._response_data: R = ...  # type: ignore[reportAttributeAccessIssue]
         self._response_error_code: int = ...  # type: ignore[reportAttributeAccessIssue]
@@ -114,13 +113,11 @@ class StubMessage(Message[BaseEvent[Any, ParamsT, T]]):
 
     def __init__(
         self,
-        params: ParamsT,
-        payload: T,
-        headers: dict[str, str] | None = None,
+        message: MessageToPublish[ParamsT, T],
     ) -> None:
-        self._params = params
-        self._data = payload
-        self._headers = headers or {}
+        self._params = message.params
+        self._data = message.payload
+        self._headers = message.headers or {}
         self._status: Literal["pending", "acked", "nacked", "termed"] = "pending"
 
     def params(self) -> ParamsT:
@@ -215,14 +212,11 @@ def make_operation(
 
 def make_request(
     request: RequestToSend[ParamsT, T, R],
-    headers: dict[str, str] | None = None,
 ) -> StubRequest[ParamsT, T, R]:
-    return StubRequest(request, headers)
+    return StubRequest(request)
 
 
 def make_message(
-    params: ParamsT,
-    payload: T,
-    headers: dict[str, str] | None = None,
+    message: MessageToPublish[ParamsT, T],
 ) -> StubMessage[ParamsT, T]:
-    return StubMessage(params, payload, headers)
+    return StubMessage(message)
