@@ -9,7 +9,7 @@ from contracts.testing import make_message
 async def test_my_consumer_implementation():
     # Create the endpoint implementation
     con = MyConsumerImpl()
-    # Create a new request message
+    # Create a new event message
     request = make_message(
         MyEvent.publish(
             MyEventData(1, 123456),
