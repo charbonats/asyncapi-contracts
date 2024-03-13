@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, AsyncContextManager, Callable, Iterable
+from contextlib import AsyncExitStack
+from typing import Any, Callable, Iterable
 
 from nats.aio.client import Client as NatsClient
 from nats_contrib import micro
@@ -9,17 +10,14 @@ from nats_contrib.micro.api import Endpoint, Service
 from nats_contrib.micro.client import Client as BaseMicroClient
 from nats_contrib.micro.request import Request as MicroRequest
 
-from contracts.application import (
-    Application,
-    validate_consumers,
-    validate_operations,
-)
 from contracts.abc.consumer import BaseConsumer
 from contracts.abc.operation import BaseOperation
-from contracts.abc.operation_request import OT, Request
-from contracts.abc.server import Server as BaseServer
+from contracts.abc.request import OT, Request
+from contracts.application import Application
 from contracts.asyncapi.renderer import create_docs_server
 from contracts.core.types import ParamsT, T
+from contracts.instance import Instance
+from contracts.server import Server, ServerAdapter
 
 
 async def _add_operation(
@@ -62,6 +60,30 @@ async def _add_operation(
     )
 
 
+def create_micro_server(
+    ctx: micro.Context,
+    queue_group: str | None = None,
+    now: Callable[[], datetime.datetime] | None = None,
+    id_generator: Callable[[], str] | None = None,
+    api_prefix: str | None = None,
+    http_port: int | None = None,
+    docs_path: str = "/docs",
+    asyncapi_path: str = "/asyncapi.json",
+) -> Server:
+    """Create a micro server."""
+    adapter = MicroAdapter(
+        ctx.client,
+        queue_group=queue_group,
+        now=now,
+        id_generator=id_generator,
+        api_prefix=api_prefix,
+        http_port=http_port,
+        docs_path=docs_path,
+        asyncapi_path=asyncapi_path,
+    )
+    return Server(adapter)
+
+
 async def start_micro_server(
     ctx: micro.Context,
     app: Application,
@@ -75,24 +97,65 @@ async def start_micro_server(
     http_port: int | None = None,
     docs_path: str = "/docs",
     asyncapi_path: str = "/asyncapi.json",
-) -> Service:
+) -> Server:
     """Start a micro server."""
-    server = MicroServer(
-        ctx.client,
+    server = create_micro_server(
+        ctx,
         queue_group=queue_group,
         now=now,
         id_generator=id_generator,
         api_prefix=api_prefix,
+        http_port=http_port,
+        docs_path=docs_path,
+        asyncapi_path=asyncapi_path,
     )
-    if http_port is not None:
-        http_server = create_docs_server(
-            app, port=http_port, docs_path=docs_path, asyncapi_path=asyncapi_path
-        )
-        await ctx.enter(http_server)
-    return await ctx.enter(server.add_application(app, *components))
+    server.bind(app, *components)
+    return await ctx.enter(server)
 
 
-class MicroServer(BaseServer[Service, Endpoint, Any]):
+class MicroInstance(Instance):
+    def __init__(
+        self,
+        queue_group: str | None,
+        service: Service,
+        app: Application,
+        operations: Iterable[BaseOperation[Any, Any, Any, Any]],
+        consumers: Iterable[BaseConsumer[Any, Any, Any]],
+        http_port: int | None = None,
+        docs_path: str = "/docs",
+        asyncapi_path: str = "/asyncapi.json",
+    ) -> None:
+        self.queue_group = queue_group
+        self.service = service
+        self.app = app
+        self.operations = operations
+        self.consumers = consumers
+        self.http_port = http_port
+        self.docs_path = docs_path
+        self.asyncapi_path = asyncapi_path
+        self.stack = AsyncExitStack()
+
+    async def start(self) -> None:
+        await self.stack.__aenter__()
+        await self.stack.enter_async_context(self.service)
+        for endpoint in self.operations:
+            await _add_operation(self.service, endpoint)
+        for consumer in self.consumers:
+            raise NotImplementedError
+        if self.http_port:
+            server = create_docs_server(
+                self.app,
+                port=self.http_port,
+                docs_path=self.docs_path,
+                asyncapi_path=self.asyncapi_path,
+            )
+            await self.stack.enter_async_context(server)
+
+    async def stop(self) -> None:
+        await self.stack.aclose()
+
+
+class MicroAdapter(ServerAdapter):
     def __init__(
         self,
         client: NatsClient,
@@ -100,6 +163,9 @@ class MicroServer(BaseServer[Service, Endpoint, Any]):
         now: Callable[[], datetime.datetime] | None = None,
         id_generator: Callable[[], str] | None = None,
         api_prefix: str | None = None,
+        http_port: int | None = None,
+        docs_path: str = "/docs",
+        asyncapi_path: str = "/asyncapi.json",
     ) -> None:
         self._nc = client
         self._client = BaseMicroClient(client, api_prefix=api_prefix)
@@ -107,14 +173,17 @@ class MicroServer(BaseServer[Service, Endpoint, Any]):
         self.now = now
         self.id_generator = id_generator
         self.api_prefix = api_prefix
+        self.http_port = http_port
+        self.docs_path = docs_path
+        self.asyncapi_path = asyncapi_path
 
-    def add_application(
+    def create_instance(
         self,
         app: Application,
-        *components: BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any],
-    ) -> AsyncContextManager[Service]:
-        all_operations = validate_operations(app, components)
-        _ = validate_consumers(app, components)
+        operations: Iterable[BaseOperation[Any, Any, Any, Any]],
+        consumers: Iterable[BaseConsumer[Any, Any, Any]],
+    ) -> MicroInstance:
+        """Add a new instance to the server."""
         queue_group = self.queue_group
         srv = micro.add_service(
             self._nc,
@@ -127,31 +196,16 @@ class MicroServer(BaseServer[Service, Endpoint, Any]):
             id_generator=self.id_generator,
             api_prefix=self.api_prefix,
         )
-
-        class Ctx:
-            async def __aenter__(self) -> Service:
-                await srv.start()
-                for endpoint in all_operations:
-                    await _add_operation(srv, endpoint, queue_group)
-                return srv
-
-            async def __aexit__(self, *args: Any) -> None:
-                await srv.stop()
-
-        return Ctx()
-
-    async def add_operation(
-        self,
-        app: Service,
-        operation: BaseOperation[Any, Any, Any, Any],
-        queue_group: str | None = None,
-    ) -> Endpoint:
-        return await _add_operation(app, operation, queue_group)
-
-    async def add_consumer(
-        self, app: Service, consumer: BaseConsumer[Any, Any, Any]
-    ) -> Any:
-        raise NotImplementedError
+        return MicroInstance(
+            queue_group,
+            srv,
+            app,
+            operations,
+            consumers,
+            http_port=self.http_port,
+            docs_path=self.docs_path,
+            asyncapi_path=self.asyncapi_path,
+        )
 
 
 class MicroMessage(Request[OT]):

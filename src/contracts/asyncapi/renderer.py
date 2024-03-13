@@ -70,7 +70,7 @@ def create_docs_server(
     port: int = 8000,
     docs_path: str = "/",
     asyncapi_path: str = "/asyncapi.json",
-) -> Server:
+) -> DocsServer:
     asgi_app = create_docs_app(app, docs_path=docs_path, asyncapi_path=asyncapi_path)
     cfg = uvicorn.Config(
         app=asgi_app,
@@ -80,11 +80,11 @@ def create_docs_server(
         log_level=None,
         log_config=None,
     )
-    server = Server(cfg)
+    server = DocsServer(cfg)
     return server
 
 
-class Server(uvicorn.Server):
+class DocsServer(uvicorn.Server):
     """A custom Uvicorn server that can be used as an async context manager."""
 
     def __init__(self, config: uvicorn.Config) -> None:
@@ -96,7 +96,7 @@ class Server(uvicorn.Server):
     def install_signal_handlers(self) -> None:
         pass
 
-    async def __aenter__(self) -> "Server":
+    async def __aenter__(self) -> "DocsServer":
         self.task = asyncio.create_task(self.serve())
         return self
 

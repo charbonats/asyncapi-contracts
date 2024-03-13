@@ -8,6 +8,8 @@ from .types import R
 
 @dataclass
 class ExceptionFormatter(Generic[R]):
+    """Exception formatter."""
+
     origin: type[BaseException]
     code: int
     description: str

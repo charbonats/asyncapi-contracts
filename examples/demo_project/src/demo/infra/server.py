@@ -4,7 +4,8 @@ import logging
 
 from nats_contrib import micro
 
-from contracts.backends.server.micro import start_micro_server
+from contracts.backends.server.micro import create_micro_server
+from contracts.server import Server
 
 from ..app import app
 from ..domain.my_operation import MyEndpointImplementation
@@ -19,19 +20,28 @@ logging.basicConfig(
 
 async def setup(ctx: micro.Context) -> None:
     """An example setup function to start a micro service."""
+    # Log server bootstrap
+    logger.info("Configuring the server")
+    # Create the server
+    server = await create_server(ctx)
+    # Push a function to log server stopped
+    ctx.push(
+        lambda: logger.warning("Server is stopped"),
+    )
+    # Log server starting
+    logger.info("Starting the server")
+    # Start the server
+    await ctx.enter(server)
+    # Log server started
+    logger.info("Server is started and listening to requests")
+    # Push a function to be log server stopping
+    ctx.push(lambda: logger.warning("Requesting the server to stop"))
 
-    # Push a function to be called when the service is stopped
-    ctx.push(lambda: logger.warning("Exiting the service"))
 
-    logger.info("Configuring the service")
-
-    # Mount the app
-    await start_micro_server(
+async def create_server(ctx: micro.Context) -> Server:
+    # Define the server first
+    server = create_micro_server(
         ctx,
-        app,
-        [
-            MyEndpointImplementation(12),
-        ],
         # This will start an HTTP server listening on port 8000
         # The server returns the asyncapi spec on /asyncapi.json
         # and the documentation on /
@@ -39,5 +49,9 @@ async def setup(ctx: micro.Context) -> None:
         docs_path="/docs",
         asyncapi_path="/asyncapi.json",
     )
-
-    logger.info("Service is ready and listening to requests")
+    # Create endpoint instance
+    # This could be async and connect to a remote database
+    ep = MyEndpointImplementation(12)
+    # Bind server operations to application
+    server.bind(app, ep)
+    return server

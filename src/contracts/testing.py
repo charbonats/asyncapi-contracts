@@ -13,9 +13,9 @@ from typing import Any, Generic
 from typing_extensions import Literal
 
 from .abc.event import BaseEvent
-from .abc.event_message import Message
+from .abc.message import Message
 from .abc.operation import BaseOperation, RequestToSend
-from .abc.operation_request import Request
+from .abc.request import Request
 from .core.types import ParamsT, R, S, T
 
 

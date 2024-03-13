@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from contracts import Message, consumer, event
-from contracts.abc.client import Client
+from contracts.client import Client
 
 
 @dataclass

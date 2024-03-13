@@ -6,22 +6,10 @@ import pydantic
 
 from contracts.api import BaseOperation
 
-from .specification import (
-    Action,
-    AsyncAPI,
-    Channel,
-    Components,
-    Contact,
-    ExternalDocumentation,
-    Info,
-    License,
-    Message,
-    Operation,
-    OperationReply,
-    Parameter,
-    Reference,
-    Tag,
-)
+from .specification import (Action, AsyncAPI, Channel, Components, Contact,
+                            ExternalDocumentation, Info, License, Message,
+                            Operation, OperationReply, Parameter, Reference,
+                            Tag)
 
 if TYPE_CHECKING:
     from ..application import Application
@@ -70,15 +58,17 @@ def build_spec(
             Tag(
                 name=tag.name,
                 description=tag.description,
-                externalDocs=ExternalDocumentation(url=tag.external_docs)
-                if tag.external_docs
-                else None,
+                externalDocs=(
+                    ExternalDocumentation(url=tag.external_docs)
+                    if tag.external_docs
+                    else None
+                ),
             )
             for tag in app.tags
         ],
-        externalDocs=ExternalDocumentation(url=app.external_docs)
-        if app.external_docs
-        else None,
+        externalDocs=(
+            ExternalDocumentation(url=app.external_docs) if app.external_docs else None
+        ),
     )
     # Then create a spec
     spec = AsyncAPI(asyncapi="3.0.0", id=app.id, info=info, components=Components())
@@ -119,7 +109,7 @@ def build_spec(
             # Add payload message
             message = Message(
                 name=payload.type.__name__,
-                description=payload.__doc__,
+                description=payload.type.__doc__,
                 payload=request_ref,
             )
             spec.components.messages[payload.type.__name__] = message
@@ -129,7 +119,7 @@ def build_spec(
             # Add response message
             message = Message(
                 name=response.type.__name__,
-                description=response.__doc__,
+                description=response.type.__doc__,
                 payload=response_ref,
             )
             spec.components.messages[response.type.__name__] = message

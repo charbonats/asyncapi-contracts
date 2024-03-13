@@ -4,8 +4,8 @@ from nats.aio.client import Client as NatsClient
 from nats_contrib.micro.client import Client as BaseMicroClient
 from nats_contrib.micro.client import ServiceError
 
-from contracts.abc.client import Client as BaseClient
-from contracts.abc.client import OperationError, RawReply
+from contracts.client import Client as BaseClient
+from contracts.client import RawOperationError, RawReply
 
 
 class Client(BaseClient):
@@ -44,7 +44,7 @@ class Client(BaseClient):
                 timeout=timeout,
             )
         except ServiceError as e:
-            raise OperationError(e.code, e.description, e.headers, e.data) from e
+            raise RawOperationError(e.code, e.description, e.headers, e.data) from e
         return RawReply(
             response.data,
             response.headers or {},

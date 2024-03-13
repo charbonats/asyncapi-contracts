@@ -23,3 +23,19 @@ class EventSpec(Generic[S, ParamsT, T]):
         self.parameters = parameters
         self.payload = payload
         self.metadata = metadata or {}
+
+
+class MessageToPublish(Generic[ParamsT, T]):
+    def __init__(
+        self,
+        subject: str,
+        params: ParamsT,
+        payload: T,
+        headers: dict[str, str] | None,
+        spec: EventSpec[Any, ParamsT, T],
+    ) -> None:
+        self.subject = subject
+        self.params = params
+        self.payload = payload
+        self.headers = headers or {}
+        self._spec = spec

@@ -7,14 +7,13 @@ from typing import Any, Callable, Generic, Iterable, cast, overload
 from .abc.consumer import BaseConsumer
 from .abc.event import BaseEvent
 from .abc.operation import BaseOperation
+from .backends.type_adapter.defaults import sniff_type_adapter
+from .core.application_info import Contact, License, Tag
 from .core.event_spec import EventSpec
 from .core.exception_formatter import ExceptionFormatter
 from .core.operation_spec import OperationSpec
 from .core.schema import Schema
-from .core.application_info import Tag, License, Contact
 from .core.types import ParametersFactory, ParamsT, R, S, T, TypeAdapter
-
-from .backends.type_adapter.defaults import sniff_type_adapter
 
 
 def license(name: str | None = None, url: str | None = None) -> License:

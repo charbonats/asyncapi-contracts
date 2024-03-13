@@ -19,7 +19,9 @@ class Address(Generic[ParamsT]):
     """Address for a channel.
 
     An address is represented as a string and is generic over a set of parameters.
-    `ParamsT` is the type of the parameters expected to be found on each valid subject matching subject filter.
+
+    `ParamsT` is the type of the parameters expected to be found on each valid subject matching address filter.
+
     Parameters (`ParamsT`) must be a dataclass or a class with a `__fields__` attribute such as `pydantic.BaseModel`.
 
     The string representation of the address can contain placeholders for parameters:
@@ -27,27 +29,33 @@ class Address(Generic[ParamsT]):
     - `{param}`: Matches any value for parameter `param`
     - `{param...}`: Matches any remaining values for parameter `param`. This can only be used once, and must be the last parameter.
 
-    An example address is `foo.{bar}.baz.{qux...}`.
+    Args:
+        subject: The subject of the address.
+        parameters: The type of the parameters expected to be found on each valid subject matching address filter.
 
-    The associated parameters could be:
+    Examples:
 
-    ```python
-    @dataclass
-    class Params:
-        bar: str
-        qux: list[str]
+        An example address filter is `foo.{bar}.baz.{qux...}`.
 
-    address = Address("foo.{bar}.baz.{qux...}", Params)
-    ```
+        The associated parameters could be:
 
-    Such address would match `foo.abc.baz.123.456.789` and would extract the following parameters:
+        ```python
+        @dataclass
+        class Params:
+            bar: str
+            qux: list[str]
 
-    ```python
-    address.get_params("foo.abc.baz.123.456.789") == Params(
-        bar="abc",
-        qux=["123", "456", "789"],
-    )
-    ```
+        address = Address("foo.{bar}.baz.{qux...}", Params)
+        ```
+
+        Such address would match `foo.abc.baz.123.456.789` and would extract the following parameters:
+
+        ```python
+        address.get_params("foo.abc.baz.123.456.789") == Params(
+            bar="abc",
+            qux=["123", "456", "789"],
+        )
+        ```
     """
 
     subject: str

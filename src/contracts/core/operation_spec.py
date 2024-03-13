@@ -30,3 +30,21 @@ class OperationSpec(Generic[S, ParamsT, T, R]):
         self.catch = catch or []
         self.metadata = metadata or {}
         self.status_code = status_code
+
+
+class RequestToSend(Generic[ParamsT, T, R]):
+    """Endpoint request."""
+
+    def __init__(
+        self,
+        subject: str,
+        params: ParamsT,
+        payload: T,
+        headers: dict[str, str] | None,
+        spec: OperationSpec[Any, ParamsT, T, R],
+    ) -> None:
+        self.subject = subject
+        self.params = params
+        self.payload = payload
+        self.headers = headers or {}
+        self._spec = spec

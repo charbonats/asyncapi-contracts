@@ -4,33 +4,82 @@ from demo.components.my_operation import MyOperation, MyRequest
 from nats import connect
 
 from contracts.backends.client.micro import Client as MicroClient
-from contracts.abc.client import Client, OperationError
+from contracts.client import Client, OperationError
 
 
 async def do_request(
     client: Client,
 ) -> None:
     """An example function to send a request to a micro service."""
-    # This will not raise an error if the reply received indicates
-    # an error through the status code
-    response = await client.send(
-        MyOperation.request(MyRequest(value=2), "123"),
-        headers={"foo": "bar"},
+    # An exception will be raised if the request fails.
+    reply = await client.send(
+        MyOperation.request(
+            MyRequest(value=2),
+            device_id="123",
+            headers={"foo": "bar"},
+        ),
         timeout=2.5,
     )
-    # 3. Get the data
-    # This will raise an error if the reply received indicates an
-    # error through the status code
-    try:
-        data = response.data()
-        print(data)
-    except OperationError:
-        # You can access the decoded error in such case
-        error = response.error()
-        print(error)
-    # 4. Headers can always be accessed, even if the reply is an error
-    headers = response.headers()
+    data = reply.data()
+    print(data)
+    headers = reply.headers()
     print(headers)
+
+
+async def do_request_with_error_handling(
+    client: Client,
+) -> None:
+    """An example function to send a request to a micro service."""
+    request = MyOperation.request(
+        MyRequest(value=2),
+        device_id="123",
+        headers={"foo": "bar"},
+    )
+    try:
+        reply = await client.send(
+            request,
+            timeout=2.5,
+        )
+        data = reply.data()
+        print(data)
+        headers = reply.headers()
+        print(headers)
+    except OperationError as e:
+        print(e.code)
+        print(e.description)
+        print(e.headers)
+        # Error data is not parsed into an object
+        print(e.raw_data.decode())
+        # But it can be decoded easily using the client
+        data = client.decode_error(request, e)
+        print(data)
+
+
+async def do_request_without_raising_exception(
+    client: Client,
+) -> None:
+    """An example function to send a request to a micro service."""
+    reply = await client.send(
+        MyOperation.request(
+            MyRequest(value=2),
+            device_id="123",
+            headers={"foo": "bar"},
+        ),
+        timeout=2.5,
+        raise_on_error=False,
+    )
+    if reply.is_error():
+        data = reply.error_data()
+        print(data)
+        headers = reply.headers()
+        print(headers)
+        print(reply.error_code())
+        print(reply.error_description())
+    else:
+        data = reply.data()
+        print(data)
+        headers = reply.headers()
+        print(headers)
 
 
 async def main() -> None:
@@ -38,3 +87,5 @@ async def main() -> None:
     nc = await connect()
     client = MicroClient(nc)
     await do_request(client)
+    await do_request_with_error_handling(client)
+    await do_request_without_raising_exception(client)

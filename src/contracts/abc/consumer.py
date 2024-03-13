@@ -6,7 +6,7 @@ from typing import Generic
 from ..core.event_spec import EventSpec
 from ..core.types import ParamsT, S, T
 from .event import BaseEvent
-from .event_message import Message
+from .message import Message
 
 
 class BaseConsumer(Generic[S, ParamsT, T], metaclass=abc.ABCMeta):

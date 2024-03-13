@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from .core.application_info import Contact, License, Tag
 from .abc.consumer import BaseConsumer
 from .abc.operation import BaseOperation
+from .core.application_info import Contact, License, Tag
 
 
 class Application:
@@ -18,10 +18,10 @@ class Application:
         description: str | None = None,
         metadata: dict[str, str] | None = None,
         terms_of_service: str | None = None,
-        components: list[
-            type[BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]]
-        ]
-        | None = None,
+        components: (
+            list[type[BaseOperation[Any, Any, Any, Any] | BaseConsumer[Any, Any, Any]]]
+            | None
+        ) = None,
         contact: Contact | None = None,
         license: License | None = None,
         tags: list[Tag] | None = None,
